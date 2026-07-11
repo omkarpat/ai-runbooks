@@ -25,7 +25,16 @@ actor CaptureEngine {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
         guard let display = content.displays.first else { throw CaptureError.noDisplay }
 
-        let filter = SCContentFilter(display: display, excludingWindows: [])
+        // Exclude our own app (the floating command bar + menu content) so the
+        // Runbooks UI never appears in the recording.
+        let selfPID = ProcessInfo.processInfo.processIdentifier
+        let ownApp = content.applications.first { $0.processID == selfPID }
+        let filter: SCContentFilter
+        if let ownApp {
+            filter = SCContentFilter(display: display, excludingApplications: [ownApp], exceptingWindows: [])
+        } else {
+            filter = SCContentFilter(display: display, excludingWindows: [])
+        }
 
         let config = SCStreamConfiguration()
         config.width = display.width * 2          // capture at Retina backing scale
