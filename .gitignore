@@ -1,2 +1,4 @@
 .env
 runbooks-out/
+__pycache__/
+*.pyc
