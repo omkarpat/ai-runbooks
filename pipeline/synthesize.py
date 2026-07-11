@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+"""Stitch per-transition observations + narration into a runbook.
+
+Usage:  synthesize.py <steps.jsonl> <transcript.jsonl|-> <out_runbook.md> [workflow-name]
+
+Env:    SYNTH_URL     default http://127.0.0.1:8642/v1/chat/completions
+                      (Hermes local API -> routed to OpenRouter by the gateway)
+        SYNTH_TOKEN   bearer token for the Hermes API (from the generated env)
+        SYNTH_MODEL   default "default"
+        ALIGN_SLOP_S  narration/step alignment tolerance seconds (default 3)
+
+Pass "-" as the transcript to synthesize from the visual channel alone
+(graceful-degradation path).
+"""
+import json
+import os
+import sys
+
+import requests
+
+SYSTEM = """You turn screen-recording observations into a precise, reusable runbook.
+
+Input: a JSON list of observed steps. Each has visual evidence (action, target,
+details, confidence, timestamps) and possibly `narration` — what the user said
+around that moment.
+
+Rules:
+- Visual evidence is authoritative for WHAT happened; narration is authoritative
+  for WHY and for naming the workflow's intent. If they conflict about what
+  happened, trust the visual.
+- Merge steps that are one logical action (e.g. several typing transitions into
+  one "enter X into Y" step). Drop noise: spinners, focus changes, redundant views.
+- Low-confidence steps (< 0.4) that narration doesn't corroborate: include only
+  if the surrounding flow makes them clearly necessary; mark them "(uncertain)".
+- Narration with no visible action becomes a Note under the nearest step, not a step.
+
+Output exactly this markdown structure, nothing else:
+
+# Runbook: <workflow name>
+
+## Preconditions
+- <state that must already hold, from narration/first frames>
+
+## Steps
+1. **<imperative action>** — <target and specifics>. <expected result if visible>
+2. ...
+
+## Outcome
+<what the workflow accomplishes, from the final state and closing narration>
+"""
+
+
+def attach_narration(steps, transcript, slop):
+    for step in steps:
+        lo, hi = step["t0"] - slop, step["t1"] + slop
+        said = [seg["text"] for seg in transcript
+                if seg["t1"] >= lo and seg["t0"] <= hi]
+        if said:
+            step["narration"] = " ".join(said)
+    return steps
+
+
+def main() -> int:
+    if len(sys.argv) not in (4, 5):
+        print(__doc__, file=sys.stderr)
+        return 2
+    steps_path, transcript_path, out_path = sys.argv[1:4]
+    workflow = sys.argv[4] if len(sys.argv) == 5 else "(unnamed workflow)"
+
+    url = os.environ.get("SYNTH_URL", "http://127.0.0.1:8642/v1/chat/completions")
+    token = os.environ.get("SYNTH_TOKEN", "")
+    model = os.environ.get("SYNTH_MODEL", "default")
+    slop = float(os.environ.get("ALIGN_SLOP_S", "3"))
+
+    with open(steps_path) as f:
+        steps = [json.loads(line) for line in f if line.strip()]
+    if not steps:
+        print("synthesize: no steps to synthesize", file=sys.stderr)
+        return 3
+
+    transcript = []
+    if transcript_path != "-":
+        with open(transcript_path) as f:
+            transcript = [json.loads(line) for line in f if line.strip()]
+    steps = attach_narration(steps, transcript, slop)
+
+    user_msg = (
+        f"Workflow name hint: {workflow}\n"
+        f"Narration available: {bool(transcript)}\n\n"
+        f"Observed steps:\n{json.dumps(steps, indent=1)}"
+    )
+
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    resp = requests.post(url, timeout=600, headers=headers, json={
+        "model": model,
+        "messages": [{"role": "system", "content": SYSTEM},
+                     {"role": "user", "content": user_msg}],
+    })
+    resp.raise_for_status()
+    runbook = resp.json()["choices"][0]["message"]["content"]
+
+    with open(out_path, "w") as f:
+        f.write(runbook.strip() + "\n")
+    print(f"synthesize: runbook -> {out_path}", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

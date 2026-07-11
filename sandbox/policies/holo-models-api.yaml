@@ -1,0 +1,31 @@
+# OpenShell network-policy preset: allow the sandboxed pipeline to reach the
+# H Company Holo Models API (vision: frame-pair action inference, OCR).
+#
+# Schema mirrors H's demo preset (hcompai/computer-use-agents-demos
+# nemoclaw/policies/hai-agent-platform.yaml) and NemoClaw's shipped presets.
+#
+# Apply to a running sandbox:
+#   nemohermes runbooks policy-add --from-file sandbox/policies/holo-models-api.yaml
+#   nemohermes runbooks policy-list   # confirm api.hcompany.ai listed
+
+preset:
+  name: holo-models-api
+  description: "H Company Holo Models API (chat completions over screenshots)"
+
+network_policies:
+  holo-models-api:
+    name: holo-models-api
+    endpoints:
+      - host: api.hcompany.ai
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          # Least-privilege: only the two endpoints the pipeline uses.
+          - allow: { method: POST, path: "/v1/chat/completions" }
+          - allow: { method: GET,  path: "/v1/models" }
+    binaries:
+      # The runtime that makes the calls. If a call is denied, `openshell term`
+      # on the host names the real binary path — adjust here if our custom
+      # image differs.
+      - { path: /opt/hermes/.venv/bin/python3 }

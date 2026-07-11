@@ -1,0 +1,26 @@
+# OpenShell network-policy preset: allow the sandboxed pipeline to reach the
+# Gradium Speech-to-Text REST API (narration transcription).
+#
+# The pipeline uses the one-shot REST endpoint (pre-recorded audio), not the
+# WebSocket streaming API — so only one POST path is needed.
+#
+# Apply to a running sandbox:
+#   nemohermes runbooks policy-add --from-file sandbox/policies/gradium-stt.yaml
+#   nemohermes runbooks policy-list   # confirm api.gradium.ai listed
+
+preset:
+  name: gradium-stt
+  description: "Gradium STT REST endpoint (one-shot transcription)"
+
+network_policies:
+  gradium-stt:
+    name: gradium-stt
+    endpoints:
+      - host: api.gradium.ai
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: POST, path: "/api/post/speech/asr" }
+    binaries:
+      - { path: /opt/hermes/.venv/bin/python3 }
