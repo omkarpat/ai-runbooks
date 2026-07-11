@@ -10,7 +10,7 @@ A repo to use SST and computer use agents to generate dynamic replayable runbook
 ## Layout
 
 - `NEMOCLAW_PLAN.md` — implementation plan (architecture: `docs/architecture.svg`)
-- `SETUP.md` — commands to stand up the sandbox (Milestones A–C)
+- **[`SETUP.md`](SETUP.md) — install & run the NemoClaw stack on macOS (start here)**
 - `RECORDING_CONTRACT.md` — app ↔ pipeline interface
 - `app/` — macOS menu-bar recorder
 - `pipeline/` — video → runbook scripts (run inside the sandbox)
