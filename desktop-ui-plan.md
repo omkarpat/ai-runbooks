@@ -63,7 +63,7 @@ ai-runbooks/
 │       │   └── AgentRunService.swift   # session/transcript state
 │       └── Support/
 │           └── Permissions.swift       # screen/mic permission helpers
-├── PLAN.md
+├── desktep-ui-plan.md
 └── README.md
 ```
 

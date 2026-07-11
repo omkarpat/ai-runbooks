@@ -1,0 +1,8 @@
+# Swift build products
+.build/
+Runbooks.app/
+
+# Xcode / SwiftPM
+*.xcodeproj
+.swiftpm/
+Package.resolved
