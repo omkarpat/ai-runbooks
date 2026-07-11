@@ -3,9 +3,13 @@
 #
 # Usage: run.sh <video.mov> [workflow-name] [--skip-synthesis]
 #
-# Runs inside the NemoClaw sandbox. Reads keys from /sandbox/.env if present:
-#   HAI_API_KEY, GRADIUM_API_KEY, SYNTH_TOKEN (+ optional overrides, see the
-#   individual scripts' headers).
+# Keys/config are loaded from the first .env found (later shell env wins if
+# a var is already exported):
+#   1. $ENV_FILE            explicit override
+#   2. /sandbox/.env        sandbox path
+#   3. <repo-root>/.env     local dev on the Mac (gitignored; see .env.example)
+# Vars: HAI_API_KEY, GRADIUM_API_KEY, SYNTH_URL/SYNTH_TOKEN/SYNTH_MODEL
+# (+ optional overrides, see the individual scripts' headers).
 #
 # --skip-synthesis stops after steps.jsonl/transcript.jsonl. Used when the
 # Hermes agent itself performs synthesis (skill path) instead of calling its
@@ -19,7 +23,25 @@ NAME="${2:-$(basename "${VIDEO%.*}")}"
 SKIP_SYNTH="${3:-}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-[ -f /sandbox/.env ] && set -a && . /sandbox/.env && set +a
+
+# --- env loading: explicit ENV_FILE > sandbox > repo-local ---------------------
+load_env() {
+  # Values already exported in the shell take precedence over the file.
+  local f="$1" line key
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in ''|\#*) continue ;; esac
+    key="${line%%=*}"
+    [ -n "${!key:-}" ] || export "${line?}"
+  done < "$f"
+  echo "run: loaded env from $f" >&2
+}
+if [ -n "${ENV_FILE:-}" ] && [ -f "$ENV_FILE" ]; then
+  load_env "$ENV_FILE"
+elif [ -f /sandbox/.env ]; then
+  load_env /sandbox/.env
+elif [ -f "$HERE/../.env" ]; then
+  load_env "$HERE/../.env"
+fi
 
 RUN_DIR="${RUNBOOKS_DIR:-/sandbox/runbooks}/$(echo "$NAME" | tr ' /' '--')_$(date +%s)"
 WORK="$RUN_DIR/work"
