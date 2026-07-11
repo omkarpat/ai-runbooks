@@ -19,6 +19,11 @@
 ARG BASE_IMAGE=ghcr.io/nvidia/nemoclaw/hermes-sandbox-base:latest
 FROM ${BASE_IMAGE}
 
+# Required by NemoClaw's tool-disclosure contract: exactly one declaration in
+# the final stage; onboarding injects the configured mode (e.g. 'progressive')
+# through it at build time.
+ARG NEMOCLAW_TOOL_DISCLOSURE
+
 # --- OS packages -------------------------------------------------------------
 # ffmpeg for keyframe extraction and audio demux/downmix.
 RUN apt-get update \
