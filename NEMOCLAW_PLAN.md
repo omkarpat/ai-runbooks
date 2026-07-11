@@ -1,4 +1,4 @@
-# Implementation Plan: NemoClaw Session + Runbook Pipeline (v1)
+# NemoClaw Plan — Sandbox Session + Runbook Pipeline (v1)
 
 > Scope confirmed with project owner (2026-07-11): **Hermes** runtime, **local Mac** host,
 > **OpenRouter** as the agent's inference provider, **sandbox + full pipeline** (video in →

@@ -1,7 +1,7 @@
 # Recording Contract — Screen-Recording Deliverable
 
 > Interface contract between the **recording component** (you) and the **analysis
-> pipeline** (NemoClaw sandbox, see [PLAN.md](PLAN.md)). If a recording meets this
+> pipeline** (NemoClaw sandbox, see [NEMOCLAW_PLAN.md](NEMOCLAW_PLAN.md)). If a recording meets this
 > contract, the pipeline guarantees it can be processed; if it doesn't, failures are
 > on the recording side. Changes to this contract must be agreed by both sides.
 
@@ -61,9 +61,9 @@ Silence during stretches of pure clicking is fine — the pipeline degrades grac
 
 - Filename: `<workflow-slug>_<yyyymmdd>_v<n>.mp4` (e.g. `prior-auth-submit_20260711_v1.mp4`)
 - Deliver to the agreed drop location (currently: the `videos/` folder Aditya specifies;
-  final host→sandbox path is PLAN.md §7-Q4).
+  final host→sandbox path is NEMOCLAW_PLAN.md §7-Q4).
 - Include a one-line ground-truth step list per recording (plain text, the steps *you*
-  believe the workflow contains). This is the calibration reference for PLAN.md §5 —
+  believe the workflow contains). This is the calibration reference for NEMOCLAW_PLAN.md §5 —
   it's how we measure the pipeline, not extra homework.
 
 ## 6. Self-validation before handoff
