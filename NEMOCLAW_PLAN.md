@@ -24,7 +24,7 @@
 | Vision engine | H Holo Models API (`api.hcompany.ai/v1`) | Called as an egress-allowed HTTP tool from inside the sandbox, NOT via inference routing. |
 | Speech engine | Gradium STT REST (`api.gradium.ai/api/post/speech/asr`) | One-shot POST fits pre-recorded audio (WebSocket API exists but is for live streams). Same pattern as Holo: egress-allowed HTTP tool, key in sandbox env. Third and final allowlisted host. |
 | Pipeline location | Inside the sandbox | Input is an uploaded video file, so nothing except the file drop needs the host. |
-| Recording | External deliverable (separate engineer) | Single .mp4 with muxed narration audio, per RECORDING_CONTRACT.md. |
+| Recording | macOS app in `app/` (ScreenCaptureKit) | `.mov` with H.264 + 2 AAC tracks (system + mic), sidecar JSON, per RECORDING_CONTRACT.md. |
 
 **Model plan:** `holo3-1-35b-a3b` for frame-pair action inference (structured outputs,
 cheap, free tier for dev). Escalate dense/text-heavy frames to `holo3-122b-a10b` (35B's
@@ -120,7 +120,9 @@ Layout (in repo, synced into `/sandbox/pipeline/`):
 ```
 pipeline/
   extract_frames.sh      # ffmpeg scene-change keyframes + 1fps floor → frames/*.png (timestamped)
-  extract_audio.sh       # ffmpeg -vn → audio.wav (16-bit PCM mono; WAV accepted by Gradium)
+  extract_audio.sh       # mic track only: ffmpeg -map 0:a:1 -ac 1 → audio.wav
+                         #   (app records 2 audio tracks: a:0 system, a:1 mic —
+                         #    see RECORDING_CONTRACT.md §1; mono 16-bit PCM for Gradium)
   transcribe.py          # audio.wav → Gradium STT REST (one POST, NDJSON back)
                          #   pair text.start_s with end_text.stop_s
                          #   → transcript.jsonl {t0,t1,text}
@@ -149,8 +151,10 @@ title, source-video metadata, preconditions, numbered steps
 (action + target + expected result + operator note from narration where available),
 artifacts (key frames referenced per step).
 
-Ingest: drop the .mp4 into the sandbox workspace (`/sandbox/videos/`) from the host —
-mechanism per NemoClaw "Workspace Files" doc (verify: file drop vs `openshell` copy).
+Ingest: recordings are `.mov` files (QuickTime, H.264 + 2×AAC) written by the app to
+`~/Library/Application Support/ai-runbooks/recordings/`, sidecar JSON = completion
+signal. Host side syncs finished recordings into `/sandbox/videos/` — mechanism per
+NemoClaw "Workspace Files" doc (verify: file drop vs `openshell` copy).
 
 Persistence: output stays in `/sandbox/runbooks/`; `nemohermes runbooks snapshot create`
 after each successful run = v1 storage story.
