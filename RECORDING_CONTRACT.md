@@ -85,3 +85,52 @@ expect one iteration of feedback (e.g. "narrate closer to the click", "raise fps
 
 **Out of scope for you:** transcription (pipeline calls Gradium STT), frame
 extraction, any H Company / Gradium / OpenRouter credentials.
+
+## 8. Programmatic hand-off (app → pipeline API)
+
+The app triggers processing by talking to the **Hermes agent's OpenAI-compatible API**
+on the host. There is no separate ingest service; the file drop delivers the bytes, the
+API call starts the work.
+
+### Endpoint
+
+| | |
+|---|---|
+| URL | `POST http://127.0.0.1:8642/v1/chat/completions` |
+| Auth | `Authorization: Bearer <HERMES_API_TOKEN>` — token comes from the Hermes environment generated at onboarding. Aditya provides it out-of-band; never commit it or bundle it in the app. |
+| Precondition | Port forward must be active on the host: `openshell forward start --background 8642 runbooks` (survives until reboot/terminal reset; the app should treat *connection refused* as "forward down", not fatal) |
+
+### Sequence
+
+1. **Write the file atomically:** write to `<drop>/<name>.mp4.part`, then rename to
+   `<name>.mp4`. The rename is the signal that the file is complete — never trigger
+   on a partially written file.
+2. **Trigger:** POST a chat completion referencing the file by its sandbox path:
+
+   ```json
+   {
+     "model": "default",
+     "stream": true,
+     "messages": [{
+       "role": "user",
+       "content": "Build a runbook from videos/<name>.mp4. Reply with the finished runbook markdown."
+     }]
+   }
+   ```
+3. **Result:** the agent's reply **is** the runbook markdown (it also persists a copy
+   in the sandbox at `/sandbox/runbooks/`). Use `stream: true` and a generous overall
+   timeout — processing takes minutes (longer on H's free tier), and a default
+   30–60 s HTTP timeout will cut it off.
+
+### Failure modes the app must handle
+
+| Symptom | Meaning | App behavior |
+|---|---|---|
+| connection refused | port forward not running | surface "pipeline offline"; retry after operator fixes forward |
+| 401 | bad/missing bearer token | surface configuration error |
+| agent replies "file not found" | drop-folder → sandbox sync lag | retry once after a short delay; if persistent, escalate |
+| stream ends with error mid-run | pipeline failure (see NEMOCLAW_PLAN.md §6) | keep the .mp4; re-trigger is safe (idempotent per file) |
+
+> Interface stability: the endpoint shape is OpenAI-standard and stable; the exact
+> `model` value and drop-folder path are confirmed during Milestone A/B of
+> NEMOCLAW_PLAN.md. Treat both as config, not constants.

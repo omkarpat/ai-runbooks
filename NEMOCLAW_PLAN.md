@@ -155,8 +155,14 @@ mechanism per NemoClaw "Workspace Files" doc (verify: file drop vs `openshell` c
 Persistence: output stays in `/sandbox/runbooks/`; `nemohermes runbooks snapshot create`
 after each successful run = v1 storage story.
 
-Optional (time-permitting): register `run.sh` as a Hermes **skill** so you can chat
-"build a runbook from videos/demo.mp4" instead of running the script — better demo.
+**App hand-off (decided 2026-07-11):** the macOS recorder app triggers processing by
+POSTing to the Hermes OpenAI-compatible API (`127.0.0.1:8642/v1/chat/completions`,
+bearer auth, streaming) after dropping the .mp4 — full spec in RECORDING_CONTRACT.md §8.
+This makes the Hermes **skill** registration below *required*, not optional: the chat
+instruction "build a runbook from videos/x.mp4" must reliably invoke `run.sh`.
+
+Register `run.sh` as a Hermes skill so the agent maps that instruction to the pipeline
+deterministically; the agent replies with the finished runbook markdown.
 
 ## 5. Milestone D — End-to-end run + calibration
 
@@ -197,5 +203,8 @@ Optional (time-permitting): register `run.sh` as a Hermes **skill** so you can c
 - [ ] Sample .mp4 (with narration) → `runbook.md` end-to-end, steps match ground truth
       acceptably; per-step notes reflect narration
 - [ ] Degradation check: silent video still produces a runbook
+- [ ] App hand-off check: a chat-completion request per RECORDING_CONTRACT.md §8
+      (curl is fine as a stand-in for the app) triggers the pipeline and streams back
+      the runbook
 - [ ] Cost + timing numbers captured
 - [ ] Snapshot of the working sandbox saved
