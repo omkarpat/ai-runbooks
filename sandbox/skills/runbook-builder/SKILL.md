@@ -17,7 +17,7 @@ exactly this phrasing (RECORDING_CONTRACT.md §8).
    yourself in step 3):
 
    ```bash
-   /sandbox/pipeline/run.sh /sandbox/videos/<file> "<workflow name>" --skip-synthesis
+   python3 /sandbox/pipeline/run.py /sandbox/videos/<file> "<workflow name>" --skip-synthesis
    ```
 
    The script prints the run directory path on stdout when it finishes. It
@@ -36,7 +36,7 @@ exactly this phrasing (RECORDING_CONTRACT.md §8).
 
 ## Failure handling
 
-- `run.sh` exit 4: too few keyframes — tell the user the recording appears
+- `run.py` exit 4: too few keyframes — tell the user the recording appears
   static/too short.
 - Holo rate-limited (analyze_pairs logs 429 retries): let it finish; it
   self-paces via HOLO_RPM.

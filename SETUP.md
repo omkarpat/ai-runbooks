@@ -95,7 +95,7 @@ openshell sandbox upload runbooks /tmp/.env /sandbox/.env && rm /tmp/.env
 ```bash
 nemohermes runbooks connect
 # in the sandbox shell:
-chmod +x /sandbox/pipeline/*.sh /sandbox/pipeline/smoke/*.sh
+chmod +x /sandbox/pipeline/smoke/*.sh
 set -a; . /sandbox/.env; set +a
 python3 /sandbox/pipeline/smoke/smoke_holo.py
 python3 /sandbox/pipeline/smoke/smoke_gradium.py
@@ -136,7 +136,7 @@ openshell sandbox upload runbooks \
   /sandbox/videos/
 nemohermes runbooks connect
 # inside:
-/sandbox/pipeline/run.sh /sandbox/videos/recording-<stamp>.mov "test workflow"
+python3 /sandbox/pipeline/run.py /sandbox/videos/recording-<stamp>.mov "test workflow"
 ```
 
 Or through the agent (the desktop app's path — RECORDING_CONTRACT.md §8):
@@ -173,7 +173,7 @@ export SYNTH_URL=https://openrouter.ai/api/v1/chat/completions
 export SYNTH_TOKEN=$OPENROUTER_API_KEY
 export SYNTH_MODEL=anthropic/claude-sonnet-4.5
 export RUNBOOKS_DIR=./runbooks-out
-./pipeline/run.sh <recording.mov> "my workflow"
+python3 pipeline/run.py <recording.mov> "my workflow"
 ```
 
 No egress enforcement, no agent — pipeline behavior only. Anything tuned here
