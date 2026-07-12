@@ -19,6 +19,13 @@
 ARG BASE_IMAGE=ghcr.io/nvidia/nemoclaw/hermes-sandbox-base:latest
 FROM ${BASE_IMAGE}
 
+# --- Tool-disclosure contract ------------------------------------------------
+# NemoClaw (>= 0.0.79) requires a custom sandbox Dockerfile to declare this ARG
+# in the final stage and promote it into ENV, so onboard can apply the chosen
+# tool-disclosure mode. Default 'progressive'; onboard overrides via build arg.
+ARG NEMOCLAW_TOOL_DISCLOSURE=progressive
+ENV NEMOCLAW_TOOL_DISCLOSURE=${NEMOCLAW_TOOL_DISCLOSURE}
+
 # --- OS packages -------------------------------------------------------------
 # ffmpeg for keyframe extraction and audio demux/downmix.
 RUN apt-get update \

@@ -29,6 +29,11 @@ struct FloatingBarView: View {
                     .padding(.top, 10)
             }
 
+            if let url = recorder.justFinishedURL, !agent.isRunning {
+                runbookPrompt(url)
+                Divider()
+            }
+
             inputBar
         }
         .frame(width: 616)
@@ -57,6 +62,34 @@ struct FloatingBarView: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 14)
+    }
+
+    private func runbookPrompt(_ url: URL) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "sparkles")
+                .foregroundStyle(.purple)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Recording saved")
+                    .font(.caption.weight(.semibold))
+                Text("Generate a runbook for this?")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("Not now") { recorder.clearJustFinished() }
+                .buttonStyle(.plain)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Button("Generate") {
+                agent.generateRunbook(recordingURL: url)
+                recorder.clearJustFinished()
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+        }
+        .frame(width: 600)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 
     private var statusDot: some View {
@@ -120,9 +153,9 @@ struct FloatingBarView: View {
 
     private var statusLabel: String {
         switch agent.runtimeStatus {
-        case .disconnected: return "Runtime offline"
-        case .connecting: return "Runtime connecting"
-        case .ready: return "Runtime ready (mock)"
+        case .disconnected: return "No Hermes token — check .env"
+        case .connecting: return "Hermes connecting"
+        case .ready: return "Hermes agent ready"
         }
     }
 

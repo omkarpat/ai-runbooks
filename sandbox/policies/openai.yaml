@@ -1,0 +1,29 @@
+# OpenShell network-policy preset: allow the sandbox to reach the OpenAI API
+# directly (api.openai.com).
+#
+# NOTE: for the agent brain this is usually NOT required — the Hermes agent and
+# the pipeline reach OpenAI through `inference.local`, which the OpenShell
+# gateway proxies to OpenAI from the HOST (outside the sandbox egress boundary).
+# Apply this preset only if something inside the sandbox must call
+# api.openai.com directly, e.g. pointing the pipeline's SYNTH_URL at OpenAI
+# instead of the gateway route, or using OpenAI STT/TTS.
+preset:
+  name: openai-api-direct
+  description: "Direct OpenAI API access (api.openai.com) from inside the sandbox"
+
+network_policies:
+  openai-api-direct:
+    name: openai-api-direct
+    endpoints:
+      - host: api.openai.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: POST, path: "/v1/**" }
+          - allow: { method: GET, path: "/v1/**" }
+    binaries:
+      - { path: /opt/hermes/.venv/bin/python }
+      - { path: /usr/bin/python3* }
+      - { path: /usr/local/bin/hermes }
+      - { path: /usr/bin/curl }

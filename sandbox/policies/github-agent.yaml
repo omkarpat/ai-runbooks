@@ -1,0 +1,59 @@
+# OpenShell network-policy preset: allow the Hermes agent to reach GitHub at
+# startup. The base Hermes policy (agents/hermes/policy-additions.yaml) moved
+# github.com out into an opt-in preset, and the shipped `github` preset only
+# whitelists the `git` binary. But the Hermes runtime's *python* process fetches
+# from GitHub during gateway startup (e.g. the tirith helper / skill assets) —
+# denied by default, which stalls step 7 "Setting up Hermes Agent" and leaves no
+# /sandbox/.hermes/config.yaml or /tmp/gateway.log. This grants the hermes python
+# (and git) access to github.com + the GitHub asset-download hosts.
+preset:
+  name: github-agent
+  description: "GitHub access for the Hermes agent (python + git) at startup"
+
+network_policies:
+  github-agent:
+    name: github-agent
+    endpoints:
+      - host: github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/**" }
+          - allow: { method: POST, path: "/**" }
+      - host: api.github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/**" }
+          - allow: { method: POST, path: "/**" }
+      - host: codeload.github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/**" }
+      - host: objects.githubusercontent.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/**" }
+      - host: release-assets.githubusercontent.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/**" }
+      - host: raw.githubusercontent.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/**" }
+    binaries:
+      - { path: /usr/local/bin/hermes }
+      - { path: /usr/bin/python3* }
+      - { path: /opt/hermes/.venv/bin/python }
+      - { path: /usr/bin/git }

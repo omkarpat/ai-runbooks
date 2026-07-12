@@ -10,7 +10,10 @@ final class AppModel {
     static let shared = AppModel()
 
     let recorder = RecorderService()
-    let agent = AgentRunService(runtime: MockRuntime())
+    // Chat bar is wired to the real NemoClaw Hermes agent (skills + sandbox
+    // tools) via its OpenAI-compatible API on localhost:8642. Swap to
+    // OpenAIRuntime() for direct OpenAI, or MockRuntime() for an offline demo.
+    let agent = AgentRunService(runtime: HermesRuntime())
 
     @ObservationIgnored var barController: FloatingBarController?
 

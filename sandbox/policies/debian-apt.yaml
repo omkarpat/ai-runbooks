@@ -1,0 +1,49 @@
+# OpenShell network-policy preset: allow the sandbox to reach the Debian apt
+# mirrors so ffmpeg (and other OS packages) can be installed at RUNTIME.
+#
+# Background: the default Hermes agent image does not include ffmpeg, and the
+# sandbox's deny-by-default egress blocks apt from reaching deb.debian.org
+# (HTTP 403, "FORWARD denied"). This preset opens exactly the two Debian apt
+# hosts, over http (80) and https (443), for apt's own binaries — so
+# `apt-get update && apt-get install ffmpeg` works inside the sandbox.
+#
+# Apply:  nemohermes runbooks policy-add --from-file sandbox/policies/debian-apt.yaml --yes
+preset:
+  name: debian-apt
+  description: "Debian apt mirrors (deb.debian.org, security.debian.org) for OS package installs"
+
+network_policies:
+  debian-apt:
+    name: debian-apt
+    endpoints:
+      - host: deb.debian.org
+        port: 80
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/**" }
+      - host: deb.debian.org
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/**" }
+      - host: security.debian.org
+        port: 80
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/**" }
+      - host: security.debian.org
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/**" }
+    binaries:
+      - { path: /usr/bin/apt-get }
+      - { path: /usr/bin/apt }
+      - { path: /usr/lib/apt/methods/http }
+      - { path: /usr/lib/apt/methods/https }
+      - { path: /usr/bin/dpkg }
+      - { path: /usr/bin/curl }

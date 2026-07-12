@@ -19,6 +19,14 @@ final class RecorderService {
     private(set) var elapsed: TimeInterval = 0
     private(set) var lastRecordingURL: URL?
 
+    /// Set when a recording just finished, to drive the "generate a runbook?"
+    /// prompt. Cleared once the user answers.
+    private(set) var justFinishedURL: URL?
+    /// Fired on the main actor when a recording finishes (e.g. to reveal the bar).
+    var onRecordingFinished: ((URL) -> Void)?
+
+    func clearJustFinished() { justFinishedURL = nil }
+
     var isRecording: Bool { state == .recording }
     var isBusy: Bool { state == .requestingPermission || state == .stopping }
 
@@ -92,6 +100,8 @@ final class RecorderService {
             if ok, let url, let started {
                 store.writeSidecar(for: url, startedAt: started, duration: duration, display: "main")
                 lastRecordingURL = url
+                justFinishedURL = url
+                onRecordingFinished?(url)
             }
             self.engine = nil
             self.pendingURL = nil

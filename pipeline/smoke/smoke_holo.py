@@ -41,7 +41,7 @@ def main() -> int:
     img = base64.b64encode(tiny_png()).decode()
     resp = requests.post(URL, timeout=60,
                          headers={"Authorization": f"Bearer {key}"},
-                         json={"model": MODEL, "max_tokens": 64, "messages": [{
+                         json={"model": MODEL, "max_tokens": 512, "messages": [{
                              "role": "user",
                              "content": [
                                  {"type": "image_url", "image_url": {
@@ -52,7 +52,8 @@ def main() -> int:
     if resp.status_code != 200:
         print(f"FAIL: HTTP {resp.status_code}: {resp.text[:200]}")
         return 1
-    reply = resp.json()["choices"][0]["message"]["content"]
+    msg = resp.json()["choices"][0]["message"]
+    reply = msg.get("content") or msg.get("reasoning") or ""
     print(f"OK: Holo ({MODEL}) replied: {reply.strip()[:80]}")
     return 0
 

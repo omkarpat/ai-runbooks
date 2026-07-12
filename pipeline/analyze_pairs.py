@@ -64,8 +64,10 @@ def frame_time(path: Path) -> float:
 
 def call_holo(url, key, model, frames, timeout=120, retries=3):
     body = {
+        # holo3-1 is a reasoning VLM: it spends tokens in `reasoning` before
+        # emitting `content`, so the budget must cover both.
         "model": model,
-        "max_tokens": 512,
+        "max_tokens": 2048,
         "messages": [{
             "role": "user",
             "content": [b64_image(frames[0]), b64_image(frames[1]),
@@ -82,7 +84,10 @@ def call_holo(url, key, model, frames, timeout=120, retries=3):
             backoff *= 2
             continue
         resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
+        msg = resp.json()["choices"][0]["message"]
+        # Answer lands in `content`; if the token budget was spent thinking,
+        # `content` can be null — fall back to `reasoning`, which holds the JSON.
+        return msg.get("content") or msg.get("reasoning") or ""
     raise RuntimeError("rate-limited after retries")
 
 

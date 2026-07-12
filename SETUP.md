@@ -1,180 +1,259 @@
 # NemoClaw Setup — Install & Run on macOS
 
-Step-by-step install of the full NemoClaw stack for this project: sandbox,
-egress policies, pipeline, smoke tests, first run. Run each step in order and
-verify its checkpoint before moving on. Maps to NEMOCLAW_PLAN.md §2–§3;
-paths are relative to the repo root.
+Set up the full NemoClaw **Hermes agent** + **runbook pipeline** for this
+project. Every command here was validated on a live install (macOS, Docker
+Desktop, `nemohermes v0.0.79`). Paths are relative to the repo root.
 
-Keys needed before starting (never commit them):
+> **The fast path is one command** — [`scripts/provision-sandbox.sh`](scripts/provision-sandbox.sh)
+> reproduces the entire sandbox from the repo. The manual steps below explain
+> what it does (and are what you reach for when debugging). See
+> [§ Portability](#portability--moving-to-another-machine) for why a script,
+> not a snapshot, is the portable unit.
 
-| Key | Format | Source |
-|---|---|---|
-| `HAI_API_KEY` | `hk-…` | portal.hcompany.ai (free tier OK for dev, 10 RPM) |
-| `GRADIUM_API_KEY` | `gd_…` | Gradium account |
-| `OPENROUTER_API_KEY` | — | openrouter.ai |
+## Keys (never commit them — `.env` is git-ignored)
 
-## 1. Prerequisites (~2 min)
+| Key (`.env`) | Format | Used for | Required |
+|---|---|---|---|
+| `OPENAI_API_KEY` | `sk-…` | Agent brain **and** pipeline synthesis (routed via `inference.local`) | ✅ |
+| `H_API_KEY` | `hk-…` | Holo vision (pipeline frame analysis) — portal.hcompany.ai | ✅ for pipeline |
+| `GRADIUM_API_KEY` | `gsk_…` / `gd_…` | Gradium STT (pipeline narration) | optional (visual-only without it) |
+
+The agent's model is **`gpt-5.6-luna`** via OpenAI. `H_API_KEY` is read into the
+sandbox as `HAI_API_KEY`.
+
+## 0. Prerequisites
 
 ```bash
-xcode-select --install 2>/dev/null
-docker info >/dev/null && echo docker-ok     # start Docker Desktop (or Colima) first
-node --version                                # need >= 22.16 (brew install node)
+docker info >/dev/null && echo docker-ok     # start Docker Desktop first
 ```
 
-**Checkpoint:** `docker-ok` prints; Node ≥ 22.16.
+- **Docker running.** Docker Desktop → Settings → Resources → Memory **≥ 8 GB**
+  (12 GB comfortable). Set memory via the GUI, or `memoryMiB` (lowercase!) in
+  `~/Library/Group Containers/group.com.docker/settings-store.json` + restart.
+- **Node** is installed by the NemoClaw installer itself (it pulls Node 22 via
+  nvm) — you don't need to pre-install it.
 
-RAM note: the sandbox image push can OOM on 8 GB Macs — close heavy apps
-first (or add swap). Image is ~2.4 GB; first build takes several minutes.
-
-## 2. Install NemoClaw + onboard the sandbox (~10–15 min)
+## 1. Install NemoClaw (~10 min, first time only)
 
 ```bash
-cd <repo-root>
-export NEMOCLAW_AGENT=hermes
-curl -fsSL https://www.nvidia.com/nemoclaw.sh | bash        # first install only
-nemohermes onboard --from sandbox/image/Dockerfile --name runbooks
+curl -fsSL https://www.nvidia.com/nemoclaw.sh | NEMOCLAW_INSTALL_TAG=v0.0.79 bash
+export PATH="$HOME/.local/bin:$PATH"      # nemohermes / openshell live here
 ```
 
-Wizard answers:
+Installs `nemohermes`, `nemoclaw`, `openshell` (0.0.72) into `~/.local/bin`.
+Pinning `v0.0.79` (the current `lkg` "last known good") keeps it reproducible;
+omit `NEMOCLAW_INSTALL_TAG` to track `lkg`, or use `latest` for the unvetted edge.
 
-| Prompt | Answer |
-|---|---|
-| Sandbox name | `runbooks` |
-| Inference provider | **OpenRouter** (paste `OPENROUTER_API_KEY`) |
-| Model | `anthropic/claude-sonnet-4.5` |
+**Checkpoint:** `nemohermes --version` → `v0.0.79`.
 
-The custom image (`sandbox/image/Dockerfile`) bakes in ffmpeg + `requests` —
-runtime installs don't work inside the sandbox (uv-managed venv, PyPI blocked
-by egress policy). If the installer auto-onboarded with defaults, re-run the
-`onboard` line to get the custom image.
-
-**Checkpoint:** onboarding prints the "NemoHermes is ready" summary.
-
-## 3. Verify the sandbox
+## 2. Fast path — provision everything (~10 min)
 
 ```bash
-nemohermes runbooks status
-curl -sf http://127.0.0.1:8642/health && echo hermes-api-ok
-nemohermes runbooks snapshot create --name clean-onboard
+cd <repo-root>              # with .env present (see Keys above)
+./scripts/provision-sandbox.sh
 ```
 
-**Checkpoint:** status healthy, `hermes-api-ok` prints, snapshot saved
-(your rollback point for everything below).
+This onboards the sandbox, sets the model, applies all egress policies, installs
+ffmpeg, uploads the pipeline + keys, snapshots, and prints the app's
+`HERMES_API_URL` / token. **If you just want it working, stop here** and jump to
+[§ Wire the desktop app](#6-wire-the-desktop-app). The rest documents the steps.
 
-## 4. Apply the egress policies
+---
 
-The policies are the security integration: deny-by-default networking with
-exactly two holes — Holo (vision) and Gradium (speech).
+## 3. Onboard the sandbox (manual)
+
+> ⚠️ **Use the DEFAULT Hermes image — do NOT pass `--from sandbox/image/Dockerfile`.**
+> That custom Dockerfile builds `FROM hermes-sandbox-base` and omits NemoClaw's
+> agent-runtime layer (config generator, guard scripts, supervised init). The
+> agent then never starts: `/sandbox/.hermes/config.yaml` is never generated and
+> writes fail with `[SECURITY] … refuses mutation under a foreign PID 1`. The
+> default image bakes all of that in. (ffmpeg, which the custom image was for, is
+> handled at runtime in step 5.)
 
 ```bash
-nemohermes runbooks policy-add --from-file sandbox/policies/holo-models-api.yaml
-nemohermes runbooks policy-add --from-file sandbox/policies/gradium-stt.yaml
+export NEMOCLAW_PROVIDER=openai NEMOCLAW_MODEL=gpt-4o-mini
+export NEMOCLAW_PROVIDER_KEY="$OPENAI_API_KEY" OPENAI_API_KEY="$OPENAI_API_KEY"
+export NEMOCLAW_IGNORE_RUNTIME_RESOURCES=1 NEMOCLAW_RECREATE_WITHOUT_BACKUP=1
+
+nemohermes onboard --non-interactive --fresh --recreate-sandbox --agent hermes \
+  --name runbooks --no-gpu --no-sandbox-gpu --yes --yes-i-accept-third-party-software
+```
+
+`gpt-4o-mini` is transient — it passes onboarding's inference smoke test (the
+gpt-5.x family rejects the smoke probe's `max_tokens` param). Switch to the real
+model next:
+
+```bash
+nemohermes inference set --provider openai-api --model gpt-5.6-luna \
+  --sandbox runbooks --no-verify        # --no-verify skips the max_tokens smoke
+```
+
+**Checkpoint:** onboarding ends with **"Hermes is ready"** and
+`nemohermes runbooks status` shows `Inference: healthy` on `gpt-5.6-luna`.
+
+## 4. Apply egress policies
+
+Deny-by-default networking with explicit holes. The pipeline needs Holo +
+Gradium; the **agent + apt need GitHub + Debian** (the agent fetches from GitHub
+at startup; ffmpeg installs from Debian mirrors in step 5).
+
+```bash
+for f in holo-models-api gradium-stt github-agent debian-apt openai; do
+  nemohermes runbooks policy-add --from-file sandbox/policies/$f.yaml --yes
+done
+nemohermes runbooks policy-add github --yes      # built-in: git -> github.com
 nemohermes runbooks policy-list
 ```
 
-**Checkpoint:** `policy-list` shows `api.hcompany.ai` and `api.gradium.ai`.
+| Preset | Opens | Why |
+|---|---|---|
+| `holo-models-api` | `api.hcompany.ai` | Holo vision (pipeline) |
+| `gradium-stt` | `api.gradium.ai` | Gradium STT (pipeline) |
+| `github-agent` + `github` | `github.com`, `*.githubusercontent.com` | agent startup fetch (python + git) |
+| `debian-apt` | `deb.debian.org`, `security.debian.org` | ffmpeg install (§5) |
+| `openai-api-direct` | `api.openai.com` | direct OpenAI — usually unnecessary (the gateway proxies OpenAI via `inference.local`); included per project config |
 
-## 5. Upload pipeline + keys into the sandbox
+**Checkpoint:** `policy-list` shows all of the above as active (●).
+
+## 5. Install ffmpeg (runtime)
+
+The default image has no ffmpeg, and egress blocks apt until `debian-apt` (step
+4) is applied. Install it as root; Landlock being unavailable under Docker
+Desktop means the `/usr` write succeeds.
+
+```bash
+CID=$(docker ps --filter "name=openshell-runbooks" --format '{{.ID}}' | head -1)
+docker exec --user root "$CID" apt-get update
+docker exec --user root "$CID" apt-get install -y --no-install-recommends ffmpeg
+openshell sandbox exec -n runbooks -- sh -lc 'ffmpeg -version | head -1'
+```
+
+**Checkpoint:** `ffmpeg version 7.x` prints. `requests` is already in the image.
+
+> This ffmpeg install lives in the container layer — it survives restarts but
+> **not** `--recreate-sandbox`. Re-run this step (or the provision script) after
+> a recreate.
+
+## 6. Wire the desktop app
+
+The chat bar talks to the Hermes agent's OpenAI-compatible API. Port 8642 is
+auto-forwarded during onboarding (`openshell forward start --background 8642 runbooks`
+if it isn't). Add to the repo-root `.env`:
+
+```bash
+{
+  echo "HERMES_API_URL = http://127.0.0.1:8642/v1/chat/completions"
+  echo "HERMES_API_TOKEN = $(nemohermes runbooks gateway-token --quiet)"
+} >> .env
+```
+
+The app ([`app/`](app/)) reads these via `SecretsLoader`; `HermesRuntime` is
+already wired in `AppModel`. Run it:
+
+```bash
+cd app && make run
+```
+
+**Checkpoint:** green "Hermes agent ready" dot; a prompt returns a real agent
+reply. Verify the API directly:
+
+```bash
+TOKEN=$(nemohermes runbooks gateway-token --quiet)
+curl -s http://127.0.0.1:8642/v1/chat/completions \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"model":"hermes-agent","messages":[{"role":"user","content":"say hi"}]}'
+# -> {"choices":[{"message":{"content":"Hi! ..."}}], ...}
+```
+
+> The gateway token rotates on gateway restart. If chat 401s, refresh
+> `HERMES_API_TOKEN` in `.env`.
+
+## 7. Run the pipeline (recording → runbook)
+
+Upload the pipeline + keys, then a recording, then run it. `openshell upload`
+nests the dir, so the script lands at `/sandbox/pipeline/pipeline/run.sh`.
 
 ```bash
 openshell sandbox upload runbooks pipeline /sandbox/pipeline
-printf 'HAI_API_KEY=hk-...\nGRADIUM_API_KEY=gd_...\n' > /tmp/.env   # real keys
-openshell sandbox upload runbooks /tmp/.env /sandbox/.env && rm /tmp/.env
-```
+# /sandbox/.env with the pipeline keys (SYNTH goes through the gateway route):
+printf 'HAI_API_KEY=%s\nGRADIUM_API_KEY=%s\nSYNTH_URL=https://inference.local/v1/chat/completions\nSYNTH_MODEL=gpt-5.6-luna\n' \
+  "$H_API_KEY" "$GRADIUM_API_KEY" > /tmp/sb.env
+openshell sandbox upload runbooks /tmp/sb.env /sandbox/.env && rm /tmp/sb.env
 
-> ⚠️ `openshell sandbox upload` syntax is from the NemoClaw Workspace Files
-> doc, not verified against a live install. If it errors, check
-> `openshell sandbox --help` — up/download are the documented transfer
-> commands, but argument order may differ.
-
-**Checkpoint:** `nemohermes runbooks connect` →
-`ls /sandbox/pipeline && cat /sandbox/.env` shows scripts + keys.
-
-## 6. Smoke tests (inside the sandbox)
-
-```bash
-nemohermes runbooks connect
-# in the sandbox shell:
-chmod +x /sandbox/pipeline/*.sh /sandbox/pipeline/smoke/*.sh
-set -a; . /sandbox/.env; set +a
-python3 /sandbox/pipeline/smoke/smoke_holo.py
-python3 /sandbox/pipeline/smoke/smoke_gradium.py
-bash /sandbox/pipeline/smoke/test_egress_blocked.sh
-```
-
-**Checkpoint (all three):**
-
-```
-OK: Holo (holo3-1-35b-a3b) replied: red
-OK: Gradium streamed N NDJSON messages (types: [...])
-OK: non-allowlisted egress blocked
-```
-
-Debugging a denied call: run `openshell term` in another host terminal and
-retry — it names the binary and host that got blocked. If the binary differs
-from `/opt/hermes/.venv/bin/python3`, fix it in both files under
-`sandbox/policies/` and re-run `policy-add`.
-
-## 7. Install the Hermes skill
-
-```bash
-openshell sandbox upload runbooks sandbox/skills/runbook-builder /sandbox/.hermes/skills/runbook-builder
-```
-
-**Checkpoint:** inside the sandbox, start `hermes` and ask "what skills do
-you have?" — expect `runbook-builder`. (Skill directory path is from docs;
-verify against the Hermes skills reference if it doesn't register.)
-
-## 8. First real run
-
-Record a short (~1 min) narrated clip with the app (`app/`), wait for the
-sidecar `.json` (completion signal — see RECORDING_CONTRACT.md §1), then:
-
-```bash
+# a recording from the app:
 openshell sandbox upload runbooks \
   ~/Library/Application\ Support/ai-runbooks/recordings/recording-<stamp>.mov \
-  /sandbox/videos/
-nemohermes runbooks connect
-# inside:
-/sandbox/pipeline/run.sh /sandbox/videos/recording-<stamp>.mov "test workflow"
-```
+  /sandbox/videos/recording.mov
 
-Or through the agent (the desktop app's path — RECORDING_CONTRACT.md §8):
-
-```bash
-curl -N http://127.0.0.1:8642/v1/chat/completions \
-  -H "Authorization: Bearer $HERMES_API_TOKEN" -H "Content-Type: application/json" \
-  -d '{"model":"default","stream":true,"messages":[{"role":"user","content":"Build a runbook from videos/recording-<stamp>.mov for workflow '\''test workflow'\''. Reply with the finished runbook markdown."}]}'
+openshell sandbox exec -n runbooks -- \
+  bash /sandbox/pipeline/pipeline/run.sh /sandbox/videos/recording.mov "test workflow"
 ```
 
 **Checkpoint:** `runbook.md` lands in `/sandbox/runbooks/<name>_<epoch>/`.
-Timing: on the free Holo tier expect ~6 s per frame pair (10 RPM); a 1-minute
-clip ≈ 5–10 min of analysis.
+Holo's free tier is ~6 s/frame-pair (10 RPM) and can time out intermittently;
+`analyze_pairs.py` retries and falls back to the reasoning field. Read it:
+
+```bash
+openshell sandbox exec -n runbooks -- \
+  sh -lc 'cat /sandbox/runbooks/*/runbook.md'
+```
+
+## Portability — moving to another machine
+
+**Snapshots, the running sandbox, and the apt-installed ffmpeg are machine-local
+state** (`~/.local/state/nemoclaw`; no snapshot export). They do **not** move
+between machines. The portable unit is **this repo**:
+
+| Portable (git) | Machine-local (rebuilt each time) |
+|---|---|
+| `scripts/provision-sandbox.sh`, `sandbox/policies/*.yaml`, `pipeline/`, this file | running sandbox, Docker image, snapshots, ffmpeg install, gateway token |
+
+On a new machine: `git clone` → install NemoClaw (§1) → create `.env` with your
+keys → `./scripts/provision-sandbox.sh`. You reproduce the environment; you don't
+copy it. (Optional Tier-2: push the built sandbox image to a container registry
+for bit-identical, no-rebuild spin-up — only needed for that.)
 
 ## Lifecycle & recovery
 
 ```bash
-nemohermes runbooks snapshot create --name <label>   # before risky changes
-nemohermes runbooks logs --follow                    # debugging
-openshell forward start --background 8642 runbooks   # API port dead after reboot
-nemohermes inference set --model <m> --provider <p>  # swap synthesis model, no rebuild
-nemohermes runbooks destroy                          # nukes sandbox + state volume
+nemohermes runbooks snapshot create --name <label>   # captures state + custom policies (with content)
+nemohermes runbooks snapshot restore <label>         # reapplies them (incl. custom egress)
+nemohermes runbooks status                           # health, model, policies
+nemohermes runbooks logs --follow                    # agent runtime + audit logs
+docker logs $(docker ps -qf name=openshell-runbooks) # raw sandbox logs (egress DENIED lines etc.)
+openshell forward start --background 8642 runbooks   # re-forward API port after reboot
+nemohermes inference set --model <m> --provider openai-api --sandbox runbooks --no-verify
 ```
+
+A normal `--recreate-sandbox` restores custom egress policies **if its backup
+succeeds**; if the backup fails and you force `NEMOCLAW_RECREATE_WITHOUT_BACKUP=1`,
+re-run the provision script to reapply them.
+
+## Gotchas we hit (so you don't have to)
+
+- **Custom `--from` image on the bare base breaks the agent** — omits the runtime
+  layer → no `config.yaml`, "foreign PID 1". Use the default image (§3).
+- **RAM is not the agent-startup fix.** The agent failing at "step 7 / 90s" was
+  the missing runtime layer, not memory.
+- **ffmpeg needs the `debian-apt` egress** — apt is blocked (403) until then.
+- **gpt-5.x rejects `max_tokens`** — use `--no-verify` on `inference set`;
+  `synthesize.py`/`analyze_pairs.py` avoid it and read the reasoning field.
+- **Holo is a reasoning VLM** — small `max_tokens` returns `content: null`;
+  the pipeline bumps it and falls back to `reasoning`.
 
 ## Local dev loop (no sandbox)
 
-For fast iteration on the pipeline itself, the same scripts run directly on
-macOS — point synthesis at OpenRouter and override the output dir:
+Fast iteration on the pipeline itself, straight on macOS against OpenAI:
 
 ```bash
 brew install ffmpeg && python3 -m pip install requests
-export HAI_API_KEY=hk-... GRADIUM_API_KEY=gd_...
-export SYNTH_URL=https://openrouter.ai/api/v1/chat/completions
-export SYNTH_TOKEN=$OPENROUTER_API_KEY
-export SYNTH_MODEL=anthropic/claude-sonnet-4.5
+export HAI_API_KEY=hk-... GRADIUM_API_KEY=gsk_...
+export SYNTH_URL=https://api.openai.com/v1/chat/completions
+export SYNTH_TOKEN=$OPENAI_API_KEY
+export SYNTH_MODEL=gpt-5.6-luna
 export RUNBOOKS_DIR=./runbooks-out
 ./pipeline/run.sh <recording.mov> "my workflow"
 ```
 
-No egress enforcement, no agent — pipeline behavior only. Anything tuned here
+No egress enforcement, no agent — pipeline behavior only. Tuning here
 (`SCENE_THRESH`, `FLOOR_SECS`, prompts) carries into the sandbox unchanged.
