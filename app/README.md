@@ -1,6 +1,6 @@
 # Runbooks — macOS floating command bar (v1)
 
-Menu-bar app implementing [`../desktop-ui-plan.md`](../desktop-ui-plan.md): a
+Menu-bar app implementing [`../docs/desktop-ui-plan.md`](../docs/desktop-ui-plan.md): a
 screen-record start/stop button + a chat bar that triggers an agent run. The chat
 lives in a **floating command bar** — a borderless, always-on-top pill anchored to
 the top-center of your screen (Spotlight/Raycast style) — while a small menu-bar

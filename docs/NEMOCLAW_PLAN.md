@@ -10,7 +10,7 @@
 > second evidence channel for synthesis. Recording is a separate person's deliverable —
 > interface defined in [RECORDING_CONTRACT.md](RECORDING_CONTRACT.md).
 >
-> Architecture diagram: [docs/architecture.svg](docs/architecture.svg)
+> Architecture diagram: [architecture.svg](architecture.svg)
 
 ---
 

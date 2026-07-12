@@ -9,9 +9,14 @@ A repo to use SST and computer use agents to generate dynamic replayable runbook
 
 ## Layout
 
-- `NEMOCLAW_PLAN.md` — implementation plan (architecture: `docs/architecture.svg`)
 - **[`SETUP.md`](SETUP.md) — install & run the NemoClaw stack on macOS (start here)**
-- `RECORDING_CONTRACT.md` — app ↔ pipeline interface
-- `app/` — macOS menu-bar recorder
-- `pipeline/` — video → runbook scripts (run inside the sandbox)
-- `sandbox/` — NemoClaw artifacts: custom image, egress policies, Hermes skill
+- `app/` — macOS menu-bar recorder + Hermes chat bar (KB-grounded)
+- `pipeline/` — video → runbook stages + `kb.py` knowledge base (run inside the sandbox)
+- `sandbox/` — NemoClaw artifacts: egress policies, Hermes skills, agent standing context (`SOUL.md`)
+- `scripts/` — `provision-sandbox.sh` (reproduce the sandbox anywhere), `generate-runbook.sh`, `kb-context.sh`
+- `docs/` — architecture ([`docs/architecture.svg`](docs/architecture.svg)) and design docs:
+  - [`RECORDING_CONTRACT.md`](docs/RECORDING_CONTRACT.md) — app ↔ pipeline ↔ KB interface
+  - [`NEXT_STEPS.md`](docs/NEXT_STEPS.md) — v2 roadmap (N1 ✅ · N2 ✅ · N3 ✅ · N4 planned)
+  - [`N2_EXECUTION_PLAN.md`](docs/N2_EXECUTION_PLAN.md) — agentic execution deep-dive
+  - [`NEMOCLAW_PLAN.md`](docs/NEMOCLAW_PLAN.md) — original v1 implementation plan
+  - [`PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) · [`desktop-ui-plan.md`](docs/desktop-ui-plan.md)

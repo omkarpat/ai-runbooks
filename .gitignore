@@ -3,3 +3,4 @@ runbooks-out/
 __pycache__/
 *.pyc
 kb-out/
+.DS_Store

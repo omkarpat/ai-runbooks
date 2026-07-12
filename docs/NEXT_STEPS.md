@@ -87,7 +87,7 @@ E1 approach was superseded by better tooling. What actually shipped:
   rebuild guidance otherwise). `hermes mcp test` discovered all six tools
   (`run_agent`, `wait_for_session`, `list_agents`, `send_message`,
   `cancel_session`, `share_session`); blocked-host egress negative test recorded.
-- **Skill [`runbook-runner`](sandbox/skills/runbook-runner/SKILL.md):** find →
+- **Skill [`runbook-runner`](../sandbox/skills/runbook-runner/SKILL.md):** find →
   plan (web vs manual/local classification) → F1-lite params → confirm gate
   (with idempotence warning; `run_agent`'s native `idempotency_key` backs it) →
   launch `h/web-surfer-flash` → bounded-poll stream (`send_message` relay,
@@ -96,7 +96,7 @@ E1 approach was superseded by better tooling. What actually shipped:
 - **Report source — evidence-based, not self-reported.** `wait_for_session`
   returns only terminal `{status, answer, done}`, but `share_session` yields a
   public JSON trajectory (`events[]`, `status`, `metrics`). New egress preset
-  [`hai-trajectory-read`](sandbox/policies/hai-trajectory-read.yaml) lets the
+  [`hai-trajectory-read`](../sandbox/policies/hai-trajectory-read.yaml) lets the
   runner fetch it in-sandbox, so completion/duration/step-count come from
   observed evidence and recap-vs-trajectory mismatches are surfaced. This is
   F2's foundation.
@@ -107,7 +107,7 @@ E1 approach was superseded by better tooling. What actually shipped:
   (`completed`, 3 browser actions, no submission) — with duration and replay
   link. Failure taxonomy label applied: `blocked: login required`.
 - **Automated:** all of the above folded into
-  [`scripts/provision-sandbox.sh`](scripts/provision-sandbox.sh) (MCP register +
+  [`scripts/provision-sandbox.sh`](../scripts/provision-sandbox.sh) (MCP register +
   trajectory-read policy + skill installs), so a fresh machine reproduces it.
 - **Still open:** measure platform quota/cost under load; exercise the mid-run
   question relay (the login-wall run didn't trigger an agent question); a
