@@ -119,8 +119,8 @@ Layout (in repo, synced into `/sandbox/pipeline/`):
 
 ```
 pipeline/
-  extract_frames.sh      # ffmpeg scene-change keyframes + 1fps floor → frames/*.png (timestamped)
-  extract_audio.sh       # mic track only: ffmpeg -map 0:a:1 -ac 1 → audio.wav
+  extract_frames.py      # ffmpeg scene-change keyframes + 1fps floor → frames/*.png (timestamped)
+  extract_audio.py       # mic track only: ffmpeg -map 0:a:1 -ac 1 → audio.wav
                          #   (app records 2 audio tracks: a:0 system, a:1 mic —
                          #    see RECORDING_CONTRACT.md §1; mono 16-bit PCM for Gradium)
   transcribe.py          # audio.wav → Gradium STT REST (one POST, NDJSON back)
@@ -137,7 +137,7 @@ pipeline/
                          #   narration = intent channel: names steps, explains *why*,
                          #   disambiguates actions invisible in frame diffs
                          #   dedup, drop noise, write runbook
-  run.sh                 # orchestrate; audio + frames branches run in parallel
+  run.py                 # orchestrate; audio + frames branches run in parallel
                          #   video in → /sandbox/runbooks/<name>/runbook.md
 ```
 
@@ -163,14 +163,14 @@ after each successful run = v1 storage story.
 POSTing to the Hermes OpenAI-compatible API (`127.0.0.1:8642/v1/chat/completions`,
 bearer auth, streaming) after dropping the .mp4 — full spec in RECORDING_CONTRACT.md §8.
 This makes the Hermes **skill** registration below *required*, not optional: the chat
-instruction "build a runbook from videos/x.mp4" must reliably invoke `run.sh`.
+instruction "build a runbook from videos/x.mp4" must reliably invoke `run.py`.
 
-Register `run.sh` as a Hermes skill so the agent maps that instruction to the pipeline
+Register `run.py` as a Hermes skill so the agent maps that instruction to the pipeline
 deterministically; the agent replies with the finished runbook markdown.
 
 ## 5. Milestone D — End-to-end run + calibration
 
-1. Run `run.sh` on the sample recording.
+1. Run `run.py` on the sample recording.
 2. Calibrate ffmpeg scene threshold + fps floor against ground truth (owner watches the
    video, lists true steps, compare). Iterate until steps aren't missed/duplicated.
 3. Measure: frames sampled, Holo calls, tokens, wall-clock, $ per minute of video.

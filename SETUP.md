@@ -171,7 +171,7 @@ curl -s http://127.0.0.1:8642/v1/chat/completions \
 ## 7. Run the pipeline (recording → runbook)
 
 Upload the pipeline + keys, then a recording, then run it. `openshell upload`
-nests the dir, so the script lands at `/sandbox/pipeline/pipeline/run.sh`.
+nests the dir, so the entrypoint lands at `/sandbox/pipeline/pipeline/run.py`.
 
 ```bash
 openshell sandbox upload runbooks pipeline /sandbox/pipeline
@@ -186,7 +186,7 @@ openshell sandbox upload runbooks \
   /sandbox/videos/recording.mov
 
 openshell sandbox exec -n runbooks -- \
-  bash /sandbox/pipeline/pipeline/run.sh /sandbox/videos/recording.mov "test workflow"
+  python3 /sandbox/pipeline/pipeline/run.py /sandbox/videos/recording.mov "test workflow"
 ```
 
 **Checkpoint:** `runbook.md` lands in `/sandbox/runbooks/<name>_<epoch>/`.
@@ -252,7 +252,7 @@ export SYNTH_URL=https://api.openai.com/v1/chat/completions
 export SYNTH_TOKEN=$OPENAI_API_KEY
 export SYNTH_MODEL=gpt-5.6-luna
 export RUNBOOKS_DIR=./runbooks-out
-./pipeline/run.sh <recording.mov> "my workflow"
+python3 pipeline/run.py <recording.mov> "my workflow"
 ```
 
 No egress enforcement, no agent — pipeline behavior only. Tuning here

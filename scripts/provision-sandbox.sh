@@ -103,5 +103,5 @@ log "Done. For the app's chat bar, put these in the repo-root .env:"
 echo "  HERMES_API_URL = http://127.0.0.1:8642/v1/chat/completions"
 printf "  HERMES_API_TOKEN = "; nemohermes runbooks gateway-token --quiet 2>/dev/null; echo
 echo
-echo "Pipeline scripts are at /sandbox/pipeline/pipeline/run.sh inside the sandbox."
-echo "Run:  openshell sandbox exec -n $SANDBOX -- bash /sandbox/pipeline/pipeline/run.sh /sandbox/videos/<clip>.mov \"my workflow\""
+echo "Pipeline entrypoint is /sandbox/pipeline/pipeline/run.py inside the sandbox."
+echo "Run:  openshell sandbox exec -n $SANDBOX -- python3 /sandbox/pipeline/pipeline/run.py /sandbox/videos/<clip>.mov \"my workflow\""

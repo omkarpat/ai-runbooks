@@ -19,10 +19,10 @@
 ARG BASE_IMAGE=ghcr.io/nvidia/nemoclaw/hermes-sandbox-base:latest
 FROM ${BASE_IMAGE}
 
-# --- Tool-disclosure contract ------------------------------------------------
-# NemoClaw (>= 0.0.79) requires a custom sandbox Dockerfile to declare this ARG
-# in the final stage and promote it into ENV, so onboard can apply the chosen
-# tool-disclosure mode. Default 'progressive'; onboard overrides via build arg.
+# Required by NemoClaw's tool-disclosure contract (validator regex demands
+# `ARG NEMOCLAW_TOOL_DISCLOSURE\s*=` with a default, exactly once in the final
+# stage, promoted to ENV). Onboarding rewrites the default with the selected
+# mode via dockerfile-patch.
 ARG NEMOCLAW_TOOL_DISCLOSURE=progressive
 ENV NEMOCLAW_TOOL_DISCLOSURE=${NEMOCLAW_TOOL_DISCLOSURE}
 

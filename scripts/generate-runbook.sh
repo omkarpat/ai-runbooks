@@ -23,10 +23,10 @@ echo "Uploading ${BASE} to the sandbox…" >&2
 openshell sandbox upload "$SANDBOX" "$REC" "/sandbox/videos/${BASE}" >&2
 
 echo "Running the runbook pipeline (frames → Holo vision → synthesis)…" >&2
-# run.sh writes all progress to its own stderr; redirect its stdout there too so
+# run.py writes all progress to its own stderr; redirect its stdout there too so
 # only the runbook (the final cat below) lands on our stdout.
 openshell sandbox exec -n "$SANDBOX" -- \
-  bash /sandbox/pipeline/pipeline/run.sh "/sandbox/videos/${BASE}" "$NAME" >&2
+  python3 /sandbox/pipeline/pipeline/run.py "/sandbox/videos/${BASE}" "$NAME" >&2
 
 echo "Fetching the generated runbook…" >&2
 openshell sandbox exec -n "$SANDBOX" -- \
