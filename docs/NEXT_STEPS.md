@@ -12,16 +12,22 @@
 > Detailed plan: [N2_EXECUTION_PLAN.md](N2_EXECUTION_PLAN.md). EU endpoint
 > (`agp.eu.hcompany.ai`) is **locked** for the PoC (won't go to prod as-is);
 > region is not a decision point anymore.
+>
+> **Status (2026-07-12): N1 ✅ · N2 ✅ · N3 ✅ · agent-awareness layer ✅
+> (see below) · N4 next.** Known constraint: chat-triggered skill flows need a
+> frontier-grade agent brain — 8B local models (qwen3, llama3.1) cannot drive
+> the Hermes tool-call loop (tested both; they fail differently). The CLI/API
+> layers work on any setup; validate chat UX on the OpenAI-keyed machine.
 
 ## N1 — Knowledge base in the sandbox (stateful) ✅ implemented
 
 > Shipped (2026-07-11): `pipeline/kb.py` (ingest/list/show CLI, JSON stdout —
 > the contract N2/N4 call) + ingest stage in `run.py` (`--skip-ingest` to opt
 > out; ingest failure never fails a run). `KB_DIR` env, default `/sandbox/kb`.
-> Interim behavior until N3: **every ingest creates a new workflow** — dedup +
-> merge are deferred because merge confirmation happens via Hermes chat (N2).
-> Catalog schema is N3-ready (`status`, empty `pending_merges`). Recording is
-> **copied** into the KB, never moved. See RECORDING_CONTRACT.md §9.
+> Catalog schema was N3-ready from day one (`status`, `pending_merges`) — N3
+> then landed the same day, so the interim every-ingest-is-a-new-workflow
+> behavior is gone. Recording is **copied** into the KB, never moved.
+> See RECORDING_CONTRACT.md §9.
 
 The sandbox stops being a compute box and becomes the system of record.
 
@@ -143,6 +149,32 @@ On every new runbook ingest:
    "Runbook updated: <title> (now backed by N runs)".
 5. Accept/reject decisions are logged — they're training signal (pairs with N5).
 
+## Agent-awareness layer (unplanned, shipped 2026-07-12) ✅
+
+Post-N3 field testing surfaced an architecture gap: **all runbook knowledge
+was retrieval-gated.** Skills carry only one-line descriptions until the
+agent decides to expand them, and even "what runbooks exist?" required a
+tool-call round-trip — so a weak agent brain genuinely "didn't know what a
+runbook is." Fix = split *definitions* from *procedures*:
+
+- **Standing context ([`sandbox/agent-context/SOUL.md`](../sandbox/agent-context/SOUL.md)):**
+  the runbook domain contract + `kb.py` cheatsheet + skill routing map +
+  confirm-gate rules, folded into the agent's system prompt **every turn**
+  (never retrieval-gated). Installed by the provision script (exec+base64 —
+  `openshell upload` can't overwrite the dotfile path).
+- **Live grounding ([`scripts/kb-context.sh`](../scripts/kb-context.sh) +
+  `HermesRuntime`):** the app prepends a compact live-catalog summary to every
+  chat message (best-effort, bounded wait) — read-queries need zero agent tool
+  calls. Rule of thumb established: *definitions/contracts → standing context ·
+  procedures → skills · live state → tool calls or app injection · experience →
+  memory · external verbs → MCP.*
+- **Provision ordering rule (hard-won):** ANY config.yaml edit — including
+  `hermes config set` — drifts NemoClaw's persisted hash, after which every
+  managed MCP mutation (add/remove, even `destroy --force`) quarantines the
+  gateway. Escape requires hand-editing `~/.nemoclaw/sandboxes.json`. Sequence
+  on fresh provisions: onboard → policies → **`mcp add` first** →
+  uploads/skills/SOUL.md → config overrides **last** → no managed config ops after.
+
 ## N4 — Web UI (FastAPI inside the sandbox)
 
 One FastAPI app in `/sandbox/webui/`, serving REST + static frontend from the
@@ -158,8 +190,11 @@ same port (e.g. 8080, forwarded like 8642):
   the recording player with timestamp-linked seeking — `t0` per step makes
   click-step-to-jump-video trivial) → runs tab (all merged source runs, each
   with its video/audio/steps) → pending merges (diff view) → edits tab (N5).
-- Image impact: add `fastapi` + `uvicorn` to `sandbox/image/Dockerfile`;
-  static frontend built on host, uploaded into `/sandbox/webui/static/`.
+- Image impact — **do NOT touch `sandbox/image/Dockerfile`**: custom `--from`
+  images omit NemoClaw's agent-runtime layer and the agent never starts
+  (SETUP.md §3 gotcha, re-confirmed twice). Install `fastapi` + `uvicorn` at
+  runtime instead (pip via the `pypi` egress preset, like the ffmpeg apt
+  pattern); static frontend built on host, uploaded into `/sandbox/webui/static/`.
 - Note: recordings currently stay on the host; N1's ingest moves them into the
   KB so the UI can serve them. Disk in the sandbox becomes a real budget —
   add recording size caps or retention to catalog config.
@@ -209,11 +244,21 @@ chat-stream parsing.
 
 ## Suggested order (hackathon-aware)
 
-**Current (owner decision 2026-07-11):** N2 (+F1-lite, see
-[N2_EXECUTION_PLAN.md](N2_EXECUTION_PLAN.md)) → N1 → N4 (read-only UI: catalog +
-detail + video) → N3 → N5 → F2/F3. N2's egress/MCP plumbing has the most
-unknowns, so it goes first; its runbook lookup is built with a one-step seam
-that N1's catalog.json replaces.
+**Current (2026-07-12): N2 ✅ → N1 ✅ → N3 ✅ (+ agent-awareness layer ✅) —
+remaining: N4 (read-only UI first: catalog + detail + video) → N5 → F2/F3.**
+N3's `edits.jsonl` merge-decision logging already implements half of N5, and
+N2's trajectory fetch is F2's foundation — both are smaller than originally
+scoped. F1-lite (param substitution at run time) shipped inside the runner
+skill; full `{{parameters}}` extraction at synthesis remains open.
+
+<details><summary>Order as of 2026-07-11 (completed)</summary>
+
+N2 (+F1-lite, see [N2_EXECUTION_PLAN.md](N2_EXECUTION_PLAN.md)) → N1 → N4 →
+N3 → N5 → F2/F3. N2's egress/MCP plumbing had the most unknowns, so it went
+first; its runbook lookup was built with a one-step seam that N1's
+catalog.json replaced (swap executed as part of N3).
+
+</details>
 
 <details><summary>Original order (superseded)</summary>
 
