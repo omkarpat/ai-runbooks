@@ -1,3 +1,14 @@
+---
+name: runbook-builder
+description: "Build a workflow runbook (markdown) from a screen recording, using the extraction+analysis pipeline then writing the synthesis."
+version: 1.0.0
+platforms: [linux, macos, windows]
+metadata:
+  hermes:
+    tags: [runbook, recording, pipeline, synthesis]
+    related_skills: [runbook-runner]
+---
+
 # Skill: runbook-builder
 
 Build a workflow runbook from a screen recording.
