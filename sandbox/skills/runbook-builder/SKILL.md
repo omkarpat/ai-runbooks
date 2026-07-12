@@ -6,7 +6,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [runbook, recording, pipeline, synthesis]
-    related_skills: [runbook-runner]
+    related_skills: [runbook-runner, runbook-merger]
 ---
 
 # Skill: runbook-builder
@@ -28,8 +28,11 @@ exactly this phrasing (RECORDING_CONTRACT.md §8).
    yourself in step 3):
 
    ```bash
-   python3 /sandbox/pipeline/run.py /sandbox/videos/<file> "<workflow name>" --skip-synthesis
+   python3 /sandbox/pipeline/pipeline/run.py /sandbox/videos/<file> "<workflow name>" --skip-synthesis
    ```
+
+   (`openshell upload` nests the repo's `pipeline/` dir; if that path doesn't
+   exist, use `/sandbox/pipeline/run.py`. Same rule for `kb.py` below.)
 
    The script prints the run directory path on stdout when it finishes. It
    contains `steps.jsonl` (visual evidence from frame-pair analysis, each step
@@ -48,7 +51,36 @@ exactly this phrasing (RECORDING_CONTRACT.md §8).
    - Narration with no visible action becomes a Note under the nearest step.
    - Structure: `# Runbook: <name>` / `## Preconditions` / `## Steps`
      (numbered, imperative, target + expected result) / `## Outcome`.
-4. Reply with the full contents of `runbook.md` — the caller streams your
+4. Register the run in the knowledge base (N1/N3 — `kb.py` prints exactly one
+   JSON object on stdout):
+
+   ```bash
+   python3 /sandbox/pipeline/pipeline/kb.py ingest <run_dir> /sandbox/videos/<file> --name "<workflow name>"
+   ```
+
+   Handle the `result` field:
+   - `"new"` → mention at the end of your reply:
+     *Saved to knowledge base as `<workflow_id>`.*
+   - `"merge_pending"` → the KB matched an existing workflow. Run
+     `kb.py show-merge <merge_id>`, then — after the runbook contents — tell
+     the user which workflow it matched and why (the `match.reason`), show a
+     compact summary of the `unified_diff` (a few changed hunks, not the whole
+     thing), and ask:
+
+     > This looks like a new run of **`<workflow_id>`**. Merge the two runbooks
+     > (recommended — the old version is kept under `versions/`), or keep this
+     > run separate?
+
+     **Never decide without the user's answer** (same rule as
+     `runbook-runner`'s confirm gate). On "merge"/"yes" →
+     `kb.py accept-merge <merge_id>`; on "separate"/"no" →
+     `kb.py reject-merge <merge_id>`. Report the JSON result in one line.
+     If `"draft": false`, say the merge draft failed — only "keep separate"
+     is available (rerun ingest later to redraft).
+   - `"already_ingested"` → say so; nothing else to do.
+   - Command failure (nonzero exit) → the runbook still exists in the run dir;
+     say KB registration failed and continue to step 5.
+5. Reply with the full contents of `runbook.md` — the caller streams your
    reply as the result.
 
 ## Failure handling
@@ -57,4 +89,5 @@ exactly this phrasing (RECORDING_CONTRACT.md §8).
   static/too short.
 - Holo rate-limited (analyze_pairs logs 429 retries): let it finish; it
   self-paces via HOLO_RPM.
-- Never write outside `/sandbox/runbooks/` and `/sandbox/videos/`.
+- Never write outside `/sandbox/runbooks/`, `/sandbox/videos/`, and
+  `/sandbox/kb/` (the latter only ever via `kb.py`, never directly).

@@ -165,14 +165,28 @@ re-trigger idempotency holds).
 
   | Command | Returns |
   |---|---|
-  | `kb.py ingest <run_dir> <video> [--name N]` | `{"result": "new"\|"already_ingested", "workflow_id", "epoch"}` |
+  | `kb.py ingest <run_dir> <video> [--name N]` | `{"result": "new"\|"already_ingested"\|"run_added"\|"merge_pending", "workflow_id", …}` |
   | `kb.py list [--status S]` | `{"workflows": [...]}` — the catalog |
   | `kb.py show <workflow_id>` | catalog record + `"runbook"` markdown (or null) |
+  | `kb.py merges` | `{"pending_merges": [...]}` — the merge queue |
+  | `kb.py show-merge <merge_id>` | entry + `current_runbook`, `merged_runbook`, `unified_diff` |
+  | `kb.py accept-merge <merge_id>` | merged draft → canonical (old → `versions/`), run promoted |
+  | `kb.py reject-merge <merge_id>` | keep separate: pending run becomes a new workflow |
 
-- `catalog.json` is the source of truth the UI/API read (NEXT_STEPS N1);
-  schema carries `status` + `pending_merges` so N3's merge queue bolts on
-  without migration. Until N3, **every ingest creates a new workflow entry**
-  (dedup is deferred).
+  Exit code `4` = invalid state (e.g. accepting a draft-less merge).
+
+- `catalog.json` is the source of truth the UI/API read (NEXT_STEPS N1).
+- **Dedup + merge (N3):** ingest pre-filters candidates by `dominant_context`,
+  an LLM judges same-workflow-ness and drafts a merged runbook; the draft goes
+  to the pending queue. **Nothing becomes canonical without an explicit
+  accept** — the `runbook-builder` skill proposes the merge in the same chat
+  turn, and `runbook-merger` handles the queue later; both shell out to this
+  CLI. LLM failures degrade safely (no-match → new workflow; failed draft →
+  `draft:false`, reject-only). Merge decisions are logged to the workflow's
+  `edits.jsonl` (N5 training signal).
+- Skill-path note: `run.py --skip-synthesis` also skips ingest — the builder
+  skill ingests via `kb.py` *after* writing `runbook.md`, so the KB entry and
+  the merge check both see the finished runbook.
 
 ## 10. Recommended app changes (non-blocking)
 

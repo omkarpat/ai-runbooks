@@ -6,7 +6,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [runbook, execution, browser, agent-platform, mcp, replay]
-    related_skills: [runbook-builder]
+    related_skills: [runbook-builder, runbook-merger]
 ---
 
 # Skill: runbook-runner
@@ -54,24 +54,33 @@ skipped.
 
 ## Steps
 
-### 1. Find the runbook (the N1 seam)
+### 1. Find the runbook (catalog lookup)
 
-Scan `/sandbox/runbooks/*/runbook.md`. Each starts with a title line:
+Query the knowledge base (one JSON object on stdout):
 
+```bash
+python3 /sandbox/pipeline/pipeline/kb.py list
 ```
-# Runbook: <name> — <context>
-```
 
-Match `<name>` (case-insensitive, ignore surrounding whitespace) against the
-requested name.
+(If that path doesn't exist, use `/sandbox/pipeline/kb.py`.)
 
-- **Exactly one match** → proceed with it.
-- **Multiple matches** → list them (name + context + run-dir) and ask which.
-- **No match** → reply with the names of every runbook that exists so the user
-  can retry. Do not guess.
+Match the requested name against each workflow's `title` (case-insensitive,
+ignore surrounding whitespace); use `dominant_context` to disambiguate.
 
-> This is the ONLY step N1's `catalog.json` will replace — keep the lookup here
-> and nowhere else so the swap is a one-function change.
+- **Exactly one match** → `kb.py show <workflow_id>` and use its `runbook`
+  field (the canonical markdown — merged across runs, newer than any single
+  run's copy).
+- **Multiple matches** → list them (title + dominant_context + workflow_id)
+  and ask which.
+- **No match** → reply with every catalog title so the user can retry. Do not
+  guess.
+- **Catalog empty** (pre-KB state) → fall back to scanning
+  `/sandbox/runbooks/*/runbook.md` by their `# Runbook: <name> — <context>`
+  title lines, as before.
+
+> Seam note: swapped from the `/sandbox/runbooks` scan to `catalog.json`
+> (N3, 2026-07-11) — exactly the one-step replacement this section was
+> designed for. The lookup lives here and nowhere else.
 
 ### 2. Plan (classify every step)
 

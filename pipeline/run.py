@@ -12,7 +12,9 @@ Vars: HAI_API_KEY, GRADIUM_API_KEY, SYNTH_URL/SYNTH_TOKEN/SYNTH_MODEL,
 RUNBOOKS_DIR, KB_DIR (+ tuning knobs, see the stage scripts' headers).
 
 --skip-synthesis stops after steps.jsonl/transcript.jsonl (used when the
-Hermes agent itself performs synthesis — skill path).
+Hermes agent itself performs synthesis — skill path). It also implies
+--skip-ingest: the agent calls kb.py ingest itself AFTER writing runbook.md,
+so the KB entry carries the runbook (and the merge check sees it).
 --skip-ingest skips registering the run in the knowledge base (kb.py).
 
 Output: $RUNBOOKS_DIR/<name>_<epoch>/{runbook.md,steps.jsonl,transcript.jsonl,work/}
@@ -124,8 +126,11 @@ def main() -> int:
         print(f"run: done -> {run_dir}/runbook.md", file=sys.stderr)
 
     # --- 5. ingest into the knowledge base (never fatal) -----------------------
-    if skip_ingest:
-        print("run: skipping KB ingest", file=sys.stderr)
+    # --skip-synthesis implies --skip-ingest: there is no runbook.md yet, the
+    # agent writes it and then calls kb.py ingest itself (runbook-builder skill).
+    if skip_ingest or skip_synth:
+        reason = "(agent synthesizes + ingests via kb.py)" if skip_synth else ""
+        print(f"run: skipping KB ingest {reason}".rstrip(), file=sys.stderr)
     else:
         # Captured (not streamed) so kb.py's JSON stdout can't pollute this
         # script's stdout contract: stdout is the run dir path, nothing else.

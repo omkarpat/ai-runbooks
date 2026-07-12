@@ -117,9 +117,10 @@ TMP_ENV="$(mktemp)"
 openshell sandbox upload "$SANDBOX" "$TMP_ENV" /sandbox/.env
 rm -f "$TMP_ENV"
 
-# --- 5b. install skills (builder = record→runbook, runner = N2 execution) ----
-log "Installing skills (runbook-builder, runbook-runner)"
-for skill in runbook-builder runbook-runner; do
+# --- 5b. install skills (builder = record→runbook, runner = N2 execution,
+#          merger = N3 merge-queue review) -----------------------------------
+log "Installing skills (runbook-builder, runbook-runner, runbook-merger)"
+for skill in runbook-builder runbook-runner runbook-merger; do
   if [ -f "$REPO_ROOT/sandbox/skills/$skill/SKILL.md" ]; then
     nemohermes runbooks skill install "$REPO_ROOT/sandbox/skills/$skill"
   fi

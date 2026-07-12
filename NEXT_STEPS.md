@@ -113,13 +113,20 @@ E1 approach was superseded by better tooling. What actually shipped:
   question relay (the login-wall run didn't trigger an agent question); a
   synthetic target without a login wall for a clean all-steps-done demo.
 
-## N3 — Ingest dedup + smart merge (propose → confirm)
+## N3 — Ingest dedup + smart merge (propose → confirm) ✅ implemented
 
-> Deferred behind N2 (2026-07-11): merge accept/reject is driven through
-> Hermes chat, so N3 waited on N2's skill wiring — **N2 has since shipped, so
-> N3 is unblocked.** Implementation extends `pipeline/kb.py` with `merges` /
-> `show-merge` / `accept-merge` / `reject-merge` subcommands (same
-> JSON-stdout conventions).
+> Shipped (2026-07-11): ingest now pre-filters candidates by
+> `dominant_context`, LLM-judges same-workflow-ness (`pipeline/llm.py`,
+> shared with synthesize), drafts a merged runbook (union of knowledge,
+> `> Alternative:` divergence notes), and queues it — `kb.py` gained
+> `merges`/`show-merge`/`accept-merge`/`reject-merge`. Confirmation is via
+> Hermes chat: `runbook-builder` proposes in the same turn as ingest;
+> the new `runbook-merger` skill works the queue later. Reject = keep
+> separate (run becomes its own workflow). Decisions logged to `edits.jsonl`
+> (N5's shape). LLM failure degrades to N1 behavior (new workflow / draft-less
+> queue entry). Also: `runbook-runner`'s lookup seam swapped to
+> `catalog.json`, and `run.py --skip-synthesis` now implies `--skip-ingest`
+> (the builder skill ingests after writing the runbook).
 
 On every new runbook ingest:
 

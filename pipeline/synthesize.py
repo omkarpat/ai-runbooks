@@ -16,7 +16,7 @@ import json
 import os
 import sys
 
-import requests
+import llm
 
 SYSTEM = """You turn screen-recording observations into a precise, reusable runbook.
 
@@ -77,9 +77,6 @@ def main() -> int:
     steps_path, transcript_path, out_path = sys.argv[1:4]
     workflow = sys.argv[4] if len(sys.argv) == 5 else "(unnamed workflow)"
 
-    url = os.environ.get("SYNTH_URL", "http://127.0.0.1:8642/v1/chat/completions")
-    token = os.environ.get("SYNTH_TOKEN", "")
-    model = os.environ.get("SYNTH_MODEL", "default")
     slop = float(os.environ.get("ALIGN_SLOP_S", "3"))
 
     with open(steps_path) as f:
@@ -110,16 +107,7 @@ def main() -> int:
         f"Observed steps:\n{json.dumps(steps, indent=1)}"
     )
 
-    headers = {"Content-Type": "application/json"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    resp = requests.post(url, timeout=600, headers=headers, json={
-        "model": model,
-        "messages": [{"role": "system", "content": SYSTEM},
-                     {"role": "user", "content": user_msg}],
-    })
-    resp.raise_for_status()
-    runbook = resp.json()["choices"][0]["message"]["content"]
+    runbook = llm.chat(SYSTEM, user_msg)
 
     with open(out_path, "w") as f:
         f.write(runbook.strip() + "\n")
