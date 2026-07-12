@@ -33,15 +33,25 @@ Rules:
 - Low-confidence steps (< 0.4) that narration doesn't corroborate: include only
   if the surrounding flow makes them clearly necessary; mark them "(uncertain)".
 - Narration with no visible action becomes a Note under the nearest step, not a step.
+- Each step carries a `context` (app — window/page title), and a context chain
+  is provided. Use it:
+  - Title: append the DOMINANT context to the runbook name, e.g.
+    "# Runbook: <workflow name> — <dominant context>".
+  - If there is more than one distinct context, group steps under
+    "### In <context>" subheadings, in chain order.
+  - A brief context island (1-2 steps) that does not serve the workflow
+    (e.g. a chat notification detour) becomes a "> Off-workflow detour:" note,
+    not steps.
 
 Output exactly this markdown structure, nothing else:
 
-# Runbook: <workflow name>
+# Runbook: <workflow name> — <dominant context>
 
 ## Preconditions
 - <state that must already hold, from narration/first frames>
 
 ## Steps
+(### In <context> subheadings when multiple contexts)
 1. **<imperative action>** — <target and specifics>. <expected result if visible>
 2. ...
 
@@ -84,9 +94,19 @@ def main() -> int:
             transcript = [json.loads(line) for line in f if line.strip()]
     steps = attach_narration(steps, transcript, slop)
 
+    # Context chain written by analyze_pairs.py next to steps.jsonl.
+    chain = {}
+    chain_path = os.path.join(os.path.dirname(os.path.abspath(steps_path)),
+                              "context_chain.json")
+    if os.path.isfile(chain_path):
+        with open(chain_path) as f:
+            chain = json.load(f)
+
     user_msg = (
         f"Workflow name hint: {workflow}\n"
-        f"Narration available: {bool(transcript)}\n\n"
+        f"Narration available: {bool(transcript)}\n"
+        f"Dominant context: {chain.get('dominant', '(unknown)')}\n"
+        f"Context chain: {json.dumps(chain.get('phases', []))}\n\n"
         f"Observed steps:\n{json.dumps(steps, indent=1)}"
     )
 

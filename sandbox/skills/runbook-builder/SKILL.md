@@ -21,11 +21,17 @@ exactly this phrasing (RECORDING_CONTRACT.md §8).
    ```
 
    The script prints the run directory path on stdout when it finishes. It
-   contains `steps.jsonl` (visual evidence from frame-pair analysis) and, if
-   narration was usable, `transcript.jsonl` (timestamped speech segments).
-3. Read both files and write `runbook.md` in the same run directory, following
+   contains `steps.jsonl` (visual evidence from frame-pair analysis, each step
+   with a `context` = app — window/page title), `context_chain.json` (ordered
+   context phases + the dominant context), and, if narration was usable,
+   `transcript.jsonl` (timestamped speech segments).
+3. Read all files and write `runbook.md` in the same run directory, following
    these rules:
    - Visual evidence is authoritative for WHAT happened; narration for WHY.
+   - Title: `# Runbook: <name> — <dominant context from context_chain.json>`.
+   - Multiple distinct contexts → group steps under `### In <context>`
+     subheadings in chain order; brief off-workflow context islands (1-2 steps,
+     e.g. a notification detour) become a `> Off-workflow detour:` note.
    - Merge transitions that form one logical action; drop noise (spinners,
      focus changes). Mark uncorroborated low-confidence steps "(uncertain)".
    - Narration with no visible action becomes a Note under the nearest step.
