@@ -2,3 +2,4 @@
 runbooks-out/
 __pycache__/
 *.pyc
+kb-out/

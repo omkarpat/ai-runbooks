@@ -148,7 +148,33 @@ streamed completion chunks map to `AgentEvent.assistantText`.
 > Interface stability: the endpoint shape is OpenAI-standard; the exact `model` value and
 > the sandbox-visible path prefix are confirmed during Milestone A/B. Treat both as config.
 
-## 9. Recommended app changes (non-blocking)
+## 9. Knowledge-base ingest (pipeline-side, NEXT_STEPS N1)
+
+After synthesis, `run.py` registers the run in a **stateful knowledge base**
+(`$KB_DIR`, default `/sandbox/kb`) via `pipeline/kb.py ingest` — catalog +
+per-workflow directories holding every contributing run's artifacts, including
+a **copy** of the source `.mov` (the original is never moved, so §8's
+re-trigger idempotency holds).
+
+- **run.py's contract is unchanged:** stdout is still the run-dir path; ingest
+  logs go to stderr; an ingest failure warns but never fails the run.
+  `--skip-ingest` opts out entirely.
+- **`kb.py` is the interface** the Hermes skill (N2) and the web UI (N4) build
+  on: every subcommand prints exactly one JSON object to stdout (logs on
+  stderr). Exit codes: `0` ok · `2` usage · `3` not found · `5` IO/catalog error.
+
+  | Command | Returns |
+  |---|---|
+  | `kb.py ingest <run_dir> <video> [--name N]` | `{"result": "new"\|"already_ingested", "workflow_id", "epoch"}` |
+  | `kb.py list [--status S]` | `{"workflows": [...]}` — the catalog |
+  | `kb.py show <workflow_id>` | catalog record + `"runbook"` markdown (or null) |
+
+- `catalog.json` is the source of truth the UI/API read (NEXT_STEPS N1);
+  schema carries `status` + `pending_merges` so N3's merge queue bolts on
+  without migration. Until N3, **every ingest creates a new workflow entry**
+  (dedup is deferred).
+
+## 10. Recommended app changes (non-blocking)
 
 1. **Add `workflow` (name) to the sidecar JSON** — removes the dependence on the chat
    message for workflow identity and makes recordings self-describing.

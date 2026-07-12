@@ -8,7 +8,15 @@
 > per-step context + context chain); sandbox onboarded, Hermes API pending
 > (HANDOFF task queue).
 
-## N1 — Knowledge base in the sandbox (stateful)
+## N1 — Knowledge base in the sandbox (stateful) ✅ implemented
+
+> Shipped (2026-07-11): `pipeline/kb.py` (ingest/list/show CLI, JSON stdout —
+> the contract N2/N4 call) + ingest stage in `run.py` (`--skip-ingest` to opt
+> out; ingest failure never fails a run). `KB_DIR` env, default `/sandbox/kb`.
+> Interim behavior until N3: **every ingest creates a new workflow** — dedup +
+> merge are deferred because merge confirmation happens via Hermes chat (N2).
+> Catalog schema is N3-ready (`status`, empty `pending_merges`). Recording is
+> **copied** into the KB, never moved. See RECORDING_CONTRACT.md §9.
 
 The sandbox stops being a compute box and becomes the system of record.
 
@@ -57,7 +65,12 @@ adds a second skill and H's phase-2 wiring:
   include local apps get those steps flagged "manual" in the run plan and the
   agent says so up front. (HoloDesktop CLI local replay = future option.)
 
-## N3 — Ingest dedup + smart merge (propose → confirm)
+## N3 — Ingest dedup + smart merge (propose → confirm) — deferred behind N2
+
+> Deferred (2026-07-11): merge accept/reject will be driven through Hermes
+> chat, so N3 waits for N2's skill wiring. Implementation extends
+> `pipeline/kb.py` with `merges` / `show-merge` / `accept-merge` /
+> `reject-merge` subcommands (same JSON-stdout conventions).
 
 On every new runbook ingest:
 

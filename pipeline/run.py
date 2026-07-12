@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Orchestrate: recording -> runbook.
 
-Usage:  run.py <video.mov> [workflow-name] [--skip-synthesis]
+Usage:  run.py <video.mov> [workflow-name] [--skip-synthesis] [--skip-ingest]
 
 Keys/config are loaded from the first .env found (already-exported shell env
 always wins over the file):
@@ -9,12 +9,14 @@ always wins over the file):
   2. /sandbox/.env        sandbox path
   3. <repo-root>/.env     local dev (gitignored; see .env.example)
 Vars: HAI_API_KEY, GRADIUM_API_KEY, SYNTH_URL/SYNTH_TOKEN/SYNTH_MODEL,
-RUNBOOKS_DIR (+ tuning knobs, see the stage scripts' headers).
+RUNBOOKS_DIR, KB_DIR (+ tuning knobs, see the stage scripts' headers).
 
 --skip-synthesis stops after steps.jsonl/transcript.jsonl (used when the
 Hermes agent itself performs synthesis — skill path).
+--skip-ingest skips registering the run in the knowledge base (kb.py).
 
 Output: $RUNBOOKS_DIR/<name>_<epoch>/{runbook.md,steps.jsonl,transcript.jsonl,work/}
+plus a knowledge-base entry under $KB_DIR (see kb.py).
 """
 import os
 import subprocess
@@ -50,8 +52,10 @@ def stage(script: str, *args: str) -> int:
 
 
 def main() -> int:
-    argv = [a for a in sys.argv[1:] if a != "--skip-synthesis"]
+    flags = ("--skip-synthesis", "--skip-ingest")
+    argv = [a for a in sys.argv[1:] if a not in flags]
     skip_synth = "--skip-synthesis" in sys.argv
+    skip_ingest = "--skip-ingest" in sys.argv
     if not argv:
         print(__doc__, file=sys.stderr)
         return 2
@@ -118,6 +122,23 @@ def main() -> int:
             print("run: synthesis failed", file=sys.stderr)
             return rc
         print(f"run: done -> {run_dir}/runbook.md", file=sys.stderr)
+
+    # --- 5. ingest into the knowledge base (never fatal) -----------------------
+    if skip_ingest:
+        print("run: skipping KB ingest", file=sys.stderr)
+    else:
+        # Captured (not streamed) so kb.py's JSON stdout can't pollute this
+        # script's stdout contract: stdout is the run dir path, nothing else.
+        proc = subprocess.run(
+            [PY, str(HERE / "kb.py"), "ingest", str(run_dir), video,
+             "--name", name],
+            capture_output=True, text=True)
+        for chunk in (proc.stderr, proc.stdout):
+            if chunk.strip():
+                print(chunk.strip(), file=sys.stderr)
+        if proc.returncode != 0:
+            print("run: WARNING KB ingest failed — run dir is preserved",
+                  file=sys.stderr)
 
     print(run_dir)
     return 0
