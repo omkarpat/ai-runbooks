@@ -235,12 +235,14 @@ async function routeDetail(wfId) {
     <div class="tabs">
       <div class="tab ${activeTab==='runbook'?'active':''}" onclick="showTab('${wfId}','runbook')">Runbook</div>
       <div class="tab ${activeTab==='runs'?'active':''}" onclick="showTab('${wfId}','runs')">Runs (${wf.runs.length})</div>
+      <div class="tab ${activeTab==='executions'?'active':''}" onclick="showTab('${wfId}','executions')">Executions</div>
       <div class="tab ${activeTab==='edits'?'active':''}" onclick="showTab('${wfId}','edits')">Edits</div>
     </div>
     <div id="tab-content"></div>`;
 
   if (activeTab === 'runbook') renderRunbookTab(wf);
   else if (activeTab === 'runs') renderRunsTab(wf);
+  else if (activeTab === 'executions') renderExecutionsTab(wfId);
   else if (activeTab === 'edits') renderEditsTab(wfId);
 }
 
@@ -380,6 +382,40 @@ window.seekTo = function(t) {
 window.highlightStep = function(el) {
   document.querySelectorAll('.step-item').forEach(s => s.classList.remove('active'));
   el.classList.add('active');
+};
+
+async function renderExecutionsTab(wfId) {
+  const tc = $('#tab-content');
+  const {executions} = await api(`/api/runbooks/${wfId}/executions`);
+  if (!executions.length) { tc.innerHTML = '<div class="empty">No executions yet. Use the chat bar: "Run the &lt;name&gt; runbook"</div>'; return; }
+  tc.innerHTML = `
+    <div class="card" style="padding:0;overflow:hidden">
+    <table>
+      <tr><th>Time</th><th>Outcome</th><th>Duration</th><th>Agent</th><th>Details</th></tr>
+      ${executions.map((e, i) => `
+        <tr>
+          <td>${e.ts ? ts(e.ts) : '—'}</td>
+          <td><span class="badge ${e.outcome === 'completed' ? 'badge-active' : 'badge-pending'}">${esc(e.outcome || '?')}</span>
+            ${e.failure_label ? `<br><small style="color:var(--red)">${esc(e.failure_label)}</small>` : ''}</td>
+          <td>${e.duration_s ? e.duration_s + 's' : '—'}</td>
+          <td>${esc(e.model_agent || '—')}</td>
+          <td>
+            ${e.trajectory_url ? `<a href="${esc(e.trajectory_url)}" target="_blank">Replay</a> · ` : ''}
+            <button onclick="toggleExecDetail(${i})">Expand</button>
+            <div id="exec-${i}" style="display:none;margin-top:8px">
+              ${e.parameters ? `<details><summary style="cursor:pointer;font-size:12px">Parameters</summary><pre style="font-size:11px;max-height:150px;overflow:auto">${esc(JSON.stringify(e.parameters, null, 2))}</pre></details>` : ''}
+              ${e.task_prompt ? `<details><summary style="cursor:pointer;font-size:12px">Task prompt sent</summary><pre style="font-size:11px;max-height:300px;overflow:auto;white-space:pre-wrap">${esc(e.task_prompt)}</pre></details>` : ''}
+              ${e.recap ? `<details><summary style="cursor:pointer;font-size:12px">Per-step recap</summary><pre style="font-size:11px;max-height:200px;overflow:auto">${esc(JSON.stringify(e.recap, null, 2))}</pre></details>` : ''}
+              ${e.trajectory ? `<details><summary style="cursor:pointer;font-size:12px">Trajectory response (${(e.trajectory.events||[]).length} events)</summary><pre style="font-size:11px;max-height:400px;overflow:auto">${esc(JSON.stringify(e.trajectory, null, 2))}</pre></details>` : ''}
+            </div>
+          </td>
+        </tr>`).join('')}
+    </table></div>`;
+}
+
+window.toggleExecDetail = function(i) {
+  const d = $(`#exec-${i}`);
+  d.style.display = d.style.display === 'none' ? 'block' : 'none';
 };
 
 async function renderEditsTab(wfId) {

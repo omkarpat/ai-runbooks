@@ -39,9 +39,13 @@ for l in open('$REPO_ROOT/.env'):
 
 OPENAI_API_KEY="$(envval OPENAI_API_KEY)"
 HAI_API_KEY="$(envval H_API_KEY)"
+H_RUN_API_KEY="$(envval H_RUN_API_KEY)"
 GRADIUM_API_KEY="$(envval GRADIUM_API_KEY)"
 [ -n "$OPENAI_API_KEY" ] || { echo "OPENAI_API_KEY missing from .env"; exit 1; }
 [ -n "$HAI_API_KEY" ]    || echo "WARN: H_API_KEY missing — Holo vision stage will fail"
+# H_RUN_API_KEY is the separate key for run execution (H agent platform).
+# Falls back to H_API_KEY if not set (backward compatible).
+HAI_RUN_KEY="${H_RUN_API_KEY:-$HAI_API_KEY}"
 
 command -v nemohermes >/dev/null || { echo "nemohermes not installed — see prereqs"; exit 1; }
 docker info >/dev/null 2>&1     || { echo "Docker daemon not running"; exit 1; }
@@ -86,15 +90,16 @@ nemohermes runbooks policy-add github --yes    # built-in: git -> github.com
 # (that would have written the bearer token into the config as plaintext).
 # The default full Hermes image already carries HTTP-MCP support, so no custom
 # image is needed; `mcp add` fails closed with rebuild guidance if it doesn't.
-if [ -n "$HAI_API_KEY" ]; then
+if [ -n "$HAI_RUN_KEY" ]; then
   log "Registering hai-agent-platform MCP server (agp.eu.hcompany.ai)"
-  HAI_AGENT_MCP_TOKEN="$HAI_API_KEY" \
+  # Uses H_RUN_API_KEY for run execution (falls back to H_API_KEY).
+  HAI_AGENT_MCP_TOKEN="$HAI_RUN_KEY" \
     nemohermes runbooks mcp add hai-agent-platform \
       --url https://agp.eu.hcompany.ai/mcp \
       --env HAI_AGENT_MCP_TOKEN
   nemohermes runbooks mcp status hai-agent-platform || true
 else
-  echo "WARN: H_API_KEY missing — skipping hai-agent-platform MCP (runbook-runner needs it)"
+  echo "WARN: H_API_KEY / H_RUN_API_KEY missing — skipping hai-agent-platform MCP (runbook-runner needs it)"
 fi
 
 # --- 4. install ffmpeg at runtime (not in the default image) ----------------

@@ -586,6 +586,35 @@ def cmd_reject_merge(args) -> int:
     return 0
 
 
+# --- execution logging ---------------------------------------------------------
+
+def cmd_log_execution(args) -> int:
+    root = kb_dir()
+    catalog = load_catalog(root)
+    wf = find_workflow(catalog, args.workflow_id)
+    if not wf:
+        emit({"error": f"workflow not found: {args.workflow_id}"})
+        return 3
+    data = sys.stdin.read().strip()
+    if not data:
+        emit({"error": "no JSON on stdin"})
+        return 2
+    try:
+        record = json.loads(data)
+    except json.JSONDecodeError:
+        emit({"error": "invalid JSON on stdin"})
+        return 2
+    record.setdefault("ts", int(time.time()))
+    wf_dir = root / wf["id"]
+    with open(wf_dir / "executions.jsonl", "a") as f:
+        f.write(json.dumps(record) + "\n")
+    wf["updated"] = int(time.time())
+    save_catalog(root, catalog)
+    log(f"execution logged for {wf['id']}")
+    emit({"result": "logged", "workflow_id": wf["id"]})
+    return 0
+
+
 # --- entrypoint ---------------------------------------------------------------
 
 def main() -> int:
@@ -624,6 +653,11 @@ def main() -> int:
     p.add_argument("merge_id")
     p.add_argument("--editor", default="hermes-chat")
     p.set_defaults(func=cmd_reject_merge)
+
+    p = sub.add_parser("log-execution",
+                       help="append an execution record (JSON from stdin)")
+    p.add_argument("workflow_id")
+    p.set_defaults(func=cmd_log_execution)
 
     args = parser.parse_args()
     llm.load_env()   # SYNTH_* for match/merge when invoked standalone

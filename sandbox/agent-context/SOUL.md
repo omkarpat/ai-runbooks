@@ -16,6 +16,7 @@ python3 /sandbox/pipeline/pipeline/kb.py merges          # pending merge proposa
 python3 /sandbox/pipeline/pipeline/kb.py show-merge <id> # proposal + diff
 python3 /sandbox/pipeline/pipeline/kb.py accept-merge <id> | reject-merge <id>
 python3 /sandbox/pipeline/pipeline/kb.py ingest <run_dir> <video> --name "<title>"
+echo '<json>' | python3 /sandbox/pipeline/pipeline/kb.py log-execution <id>  # after a run
 ```
 
 When to reach for which skill (they contain the full procedures):

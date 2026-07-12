@@ -16,6 +16,7 @@ Desktop, `nemohermes v0.0.79`). Paths are relative to the repo root.
 |---|---|---|---|
 | `OPENAI_API_KEY` | `sk-…` | Agent brain **and** pipeline synthesis (routed via `inference.local`) | ✅ (or local Ollama — see [Appendix](#appendix--running-on-local-ollama-no-openai-key)) |
 | `H_API_KEY` | `hk-…` | Holo vision (pipeline frame analysis) — portal.hcompany.ai | ✅ for pipeline |
+| `H_RUN_API_KEY` | `hk-…` | H agent platform — cloud browser run execution (N2). Falls back to `H_API_KEY` if absent | optional (separate billing) |
 | `GRADIUM_API_KEY` | `gsk_…` / `gd_…` | Gradium STT (pipeline narration) | optional (visual-only without it) |
 
 The agent's model is **`gpt-5.6-luna`** via OpenAI. `H_API_KEY` is read into the

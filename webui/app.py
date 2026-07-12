@@ -1,6 +1,6 @@
 """N4 Web UI — FastAPI REST + static frontend for the runbook knowledge base.
 
-Run:  cd webui && python3 -m uvicorn app:app --host 127.0.0.1 --port 8080
+Run:  cd webui && python3 -m uvicorn app:app --host 127.0.0.1 --port 9090
 Env:  KB_DIR   default /sandbox/kb (local: ../kb-out or wherever your KB lives)
 """
 import difflib
@@ -144,6 +144,18 @@ def get_media(wf_id: str, epoch: int, name: str):
 
 
 # --- edits ------------------------------------------------------------------
+
+@app.get("/api/runbooks/{wf_id}/executions")
+def get_executions(wf_id: str):
+    wf = kb.find_workflow(kb.load_catalog(root()), wf_id)
+    if not wf:
+        raise HTTPException(404, f"workflow not found: {wf_id}")
+    path = root() / wf_id / "executions.jsonl"
+    if not path.is_file():
+        return {"executions": []}
+    execs = [json.loads(l) for l in path.read_text().splitlines() if l.strip()]
+    return {"executions": execs}
+
 
 @app.get("/api/runbooks/{wf_id}/edits")
 def get_edits(wf_id: str):

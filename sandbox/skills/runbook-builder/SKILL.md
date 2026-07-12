@@ -61,18 +61,21 @@ exactly this phrasing (RECORDING_CONTRACT.md §8).
    Handle the `result` field:
    - `"new"` → mention at the end of your reply:
      *Saved to knowledge base as `<workflow_id>`.*
-   - `"merge_pending"` → the KB matched an existing workflow. Run
-     `kb.py show-merge <merge_id>`, then — after the runbook contents — tell
-     the user which workflow it matched and why (the `match.reason`), show a
-     compact summary of the `unified_diff` (a few changed hunks, not the whole
-     thing), and ask:
+   - `"merge_pending"` → **you MUST immediately propose the merge** (do NOT
+     wait for the user to ask). Run `kb.py show-merge <merge_id>`, then —
+     after showing the runbook contents — tell the user which workflow it
+     matched and why (the `match.reason`), show a compact summary of the
+     `unified_diff` (the changed hunks, not the full files), and ask:
 
-     > This looks like a new run of **`<workflow_id>`**. Merge the two runbooks
-     > (recommended — the old version is kept under `versions/`), or keep this
-     > run separate?
+     > This new recording matches the existing runbook **"<title>"**
+     > (<match reason>). Here's what changed:
+     > [compact diff summary]
+     > Merge into the existing runbook (recommended — the old version is kept
+     > under `versions/`), or keep this run as a separate workflow?
 
      **Never decide without the user's answer** (same rule as
-     `runbook-runner`'s confirm gate). On "merge"/"yes" →
+     `runbook-runner`'s confirm gate) — but you must always ask the question
+     up front; never silently skip the merge proposal. On "merge"/"yes" →
      `kb.py accept-merge <merge_id>`; on "separate"/"no" →
      `kb.py reject-merge <merge_id>`. Report the JSON result in one line.
      If `"draft": false`, say the merge draft failed — only "keep separate"

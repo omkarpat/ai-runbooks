@@ -210,6 +210,21 @@ Then report:
 
 Record per-step failures explicitly — they are F2's stale-detection signal.
 
+### 8. Log execution to the knowledge base
+
+After reporting, log the full execution record so the web dashboard can show
+it. Pipe a JSON object to `kb.py log-execution <workflow_id>`:
+
+```bash
+echo '{"session_id":"...","task_prompt":"...","model_agent":"h/web-surfer-flash","parameters":{...},"trajectory_url":"...","trajectory":{...},"recap":[...],"duration_s":45,"outcome":"completed|failed","failure_label":null}' \
+  | python3 /sandbox/pipeline/pipeline/kb.py log-execution <workflow_id>
+```
+
+Include: the task prompt you built (step 5), the resolved parameter values
+(step 3), the trajectory JSON you fetched (step 7), the per-step recap, the
+share URL, duration, outcome, and failure label (if any). The `ts` field is
+auto-added. This is the execution history the web UI surfaces.
+
 > **Report-source (settled + fixed after the E2 smoke run, 2026-07-11).** The MCP
 > surface does NOT return per-step events — `wait_for_session` yields only
 > `{session_id, status, answer, done}`. The evidence lives in the

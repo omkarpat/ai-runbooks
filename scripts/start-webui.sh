@@ -11,7 +11,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SANDBOX="${SANDBOX_NAME:-runbooks}"
-PORT="${WEBUI_PORT:-8080}"
+PORT="${WEBUI_PORT:-9090}"
 export PATH="$HOME/.local/bin:$PATH"
 
 log() { printf '\n=== %s ===\n' "$*"; }
