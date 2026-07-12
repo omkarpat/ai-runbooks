@@ -20,23 +20,37 @@ log() { printf '\n=== %s ===\n' "$*"; }
 log "Ensuring pypi egress policy"
 nemohermes "$SANDBOX" policy-add pypi --yes 2>/dev/null || true
 
-# 2. pip install (skip if already present)
+# 2. pip install (skip if already present; uses host-downloaded wheels for
+#    cross-platform reliability — sandbox is Linux aarch64, host may be macOS)
 log "Ensuring fastapi + uvicorn in sandbox"
-openshell sandbox exec -n "$SANDBOX" -- sh -lc \
-  'python3 -c "import fastapi, uvicorn" 2>/dev/null || python3 -m pip install --user --quiet fastapi uvicorn'
+CID="$(docker ps --filter "name=openshell-$SANDBOX" --format '{{.ID}}' | head -1)"
+if docker exec "$CID" python3 -c "import fastapi, uvicorn" 2>/dev/null; then
+  echo "  already installed"
+else
+  WHEELS="$(mktemp -d)"
+  pip3 download --dest "$WHEELS" --only-binary :all: \
+    --platform manylinux_2_17_aarch64 --python-version 313 \
+    --implementation cp --abi cp313 fastapi uvicorn requests 2>/dev/null
+  docker cp "$WHEELS/." "$CID:/tmp/wheels/"
+  docker exec "$CID" pip install --break-system-packages --no-index \
+    --find-links /tmp/wheels fastapi uvicorn requests
+  rm -rf "$WHEELS"
+fi
 
-# 3. upload webui
+# 3. upload webui (docker cp for reliability — openshell upload has transport issues)
 log "Uploading webui"
-openshell sandbox upload "$SANDBOX" "$REPO_ROOT/webui" /sandbox/webui
+CID="$(docker ps --filter "name=openshell-$SANDBOX" --format '{{.ID}}' | head -1)"
+docker cp "$REPO_ROOT/webui/." "$CID:/sandbox/webui/"
+docker exec --user root "$CID" chown -R sandbox:sandbox /sandbox/webui
 
 # 4. kill prior uvicorn (restart-safe)
 openshell sandbox exec -n "$SANDBOX" -- sh -lc 'pkill -f "uvicorn app:app" 2>/dev/null || true'
 sleep 1
 
-# 5. launch
+# 5. launch (log to /sandbox/webui/ which is sandbox-writable after chown)
 log "Starting uvicorn on :$PORT inside sandbox"
 openshell sandbox exec -n "$SANDBOX" -- sh -lc \
-  "cd /sandbox/webui/webui && nohup python3 -m uvicorn app:app --host 0.0.0.0 --port $PORT >/tmp/webui.log 2>&1 &"
+  "cd /sandbox/webui && nohup python3 -m uvicorn app:app --host 0.0.0.0 --port $PORT >webui.log 2>&1 &"
 sleep 3
 
 # 6. port forward (idempotent)
