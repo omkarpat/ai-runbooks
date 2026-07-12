@@ -57,14 +57,13 @@ final class RecorderService {
             // Mic is best-effort: if denied we still capture screen + system audio.
             _ = await Permissions.requestMicrophone()
 
-            if !Permissions.hasScreenRecording() {
-                Permissions.requestScreenRecording()
-                if !Permissions.hasScreenRecording() {
-                    Permissions.openScreenRecordingSettings()
-                    state = .failed("Enable Screen Recording in System Settings ▸ Privacy & Security, then try again.")
-                    return
-                }
-            }
+            // Trigger the Screen Recording TCC prompt on first use (a no-op if
+            // already granted). We deliberately do NOT hard-gate on
+            // CGPreflightScreenCaptureAccess(): it returns false spuriously —
+            // notably with ad-hoc signing and until the app is relaunched after a
+            // grant — which sends you to Settings even though capture would work.
+            // The real source of truth is whether the capture actually starts.
+            Permissions.requestScreenRecording()
 
             let started = Date()
             let url = store.newRecordingURL(startedAt: started)
@@ -72,7 +71,14 @@ final class RecorderService {
             do {
                 try await engine.start(url: url)
             } catch {
-                state = .failed(error.localizedDescription)
+                // Only now — capture genuinely failed — consider it a permission
+                // problem and guide to Settings.
+                if Permissions.hasScreenRecording() {
+                    state = .failed(error.localizedDescription)   // some other failure
+                } else {
+                    Permissions.openScreenRecordingSettings()
+                    state = .failed("Grant Screen Recording in System Settings ▸ Privacy & Security, then quit and reopen ai-runbooks.")
+                }
                 return
             }
 
