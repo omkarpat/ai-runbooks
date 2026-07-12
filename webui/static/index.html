@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ai-runbooks · Knowledge Base</title>
+<style>
+:root { --bg: #f8fafc; --card: #fff; --border: #e2e8f0; --text: #1e293b;
+  --muted: #64748b; --accent: #4f46e5; --green: #059669; --red: #dc2626;
+  --yellow: #d97706; --blue: #2563eb; --pink: #db2777; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg);
+  color: var(--text); line-height: 1.5; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 16px; }
+header { background: var(--accent); color: #fff; padding: 12px 0; margin-bottom: 24px; }
+header .container { display: flex; align-items: center; gap: 16px; }
+header h1 { font-size: 18px; font-weight: 600; }
+header nav a { color: rgba(255,255,255,.85); font-size: 14px; }
+header nav a:hover { color: #fff; text-decoration: none; }
+header nav a.active { color: #fff; border-bottom: 2px solid #fff; padding-bottom: 2px; }
+
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  padding: 20px; margin-bottom: 16px; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px;
+  font-weight: 600; text-transform: uppercase; }
+.badge-active { background: #ecfdf5; color: var(--green); }
+.badge-pending { background: #fffbeb; color: var(--yellow); }
+.badge-merge { background: #fdf2f8; color: var(--pink); }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border);
+  color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+tr:hover td { background: #f1f5f9; }
+tr.clickable { cursor: pointer; }
+
+.tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
+.tab { padding: 8px 16px; cursor: pointer; font-size: 14px; color: var(--muted);
+  border-bottom: 2px solid transparent; margin-bottom: -2px; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+button, .btn { display: inline-block; padding: 6px 14px; border-radius: 6px; font-size: 13px;
+  cursor: pointer; border: 1px solid var(--border); background: var(--card); color: var(--text); }
+button:hover, .btn:hover { background: #f1f5f9; }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { opacity: .9; }
+.btn-green { background: var(--green); color: #fff; border-color: var(--green); }
+.btn-red { background: var(--red); color: #fff; border-color: var(--red); }
+
+textarea { width: 100%; min-height: 300px; font-family: monospace; font-size: 13px;
+  padding: 12px; border: 1px solid var(--border); border-radius: 6px; resize: vertical; }
+
+.runbook-md { font-size: 14px; line-height: 1.7; }
+.runbook-md h1 { font-size: 20px; margin: 16px 0 8px; }
+.runbook-md h2 { font-size: 17px; margin: 14px 0 6px; color: var(--accent); }
+.runbook-md h3 { font-size: 15px; margin: 12px 0 4px; }
+.runbook-md ol, .runbook-md ul { padding-left: 24px; margin: 4px 0; }
+.runbook-md li { margin: 4px 0; }
+.runbook-md blockquote { border-left: 3px solid var(--border); padding-left: 12px;
+  color: var(--muted); margin: 8px 0; }
+.runbook-md code { background: #f1f5f9; padding: 1px 4px; border-radius: 3px; font-size: 13px; }
+.runbook-md pre { background: #f1f5f9; padding: 12px; border-radius: 6px; overflow-x: auto;
+  margin: 8px 0; font-size: 13px; }
+.runbook-md strong { font-weight: 600; }
+
+.step-list { list-style: none; padding: 0; }
+.step-item { padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px;
+  margin-bottom: 8px; cursor: pointer; transition: background .15s; font-size: 13px; }
+.step-item:hover { background: #eff6ff; border-color: var(--blue); }
+.step-item.active { background: #eff6ff; border-color: var(--blue); }
+.step-meta { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.step-context { display: inline-block; background: #f1f5f9; padding: 1px 6px;
+  border-radius: 3px; font-size: 11px; color: var(--accent); }
+.step-confidence { font-size: 11px; }
+.step-confidence.high { color: var(--green); }
+.step-confidence.low { color: var(--yellow); }
+.step-narration { font-size: 12px; color: var(--muted); font-style: italic; margin-top: 4px;
+  border-left: 2px solid var(--border); padding-left: 8px; }
+
+.transcript-seg { font-size: 12px; color: var(--muted); padding: 4px 8px; cursor: pointer;
+  border-radius: 4px; margin: 2px 0; }
+.transcript-seg:hover { background: #f1f5f9; }
+
+.media-panel { display: grid; grid-template-columns: 1fr 380px; gap: 16px; }
+@media (max-width: 900px) { .media-panel { grid-template-columns: 1fr; } }
+video { width: 100%; border-radius: 8px; background: #000; }
+
+.diff-line { font-family: monospace; font-size: 12px; white-space: pre-wrap; padding: 1px 8px; }
+.diff-add { background: #dcfce7; color: #166534; }
+.diff-del { background: #fee2e2; color: #991b1b; }
+.diff-hdr { background: #f1f5f9; color: var(--muted); }
+
+.context-chain { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.chain-phase { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px;
+  padding: 2px 8px; font-size: 11px; color: var(--blue); }
+.chain-phase.dominant { background: #dbeafe; border-color: var(--blue); font-weight: 600; }
+
+.info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px; margin: 12px 0; }
+.info-item label { font-size: 11px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .5px; display: block; }
+.info-item span { font-size: 14px; font-weight: 500; }
+
+.toast { position: fixed; bottom: 24px; right: 24px; background: #1e293b; color: #fff;
+  padding: 10px 18px; border-radius: 8px; font-size: 13px; z-index: 99; opacity: 0;
+  transition: opacity .3s; }
+.toast.show { opacity: 1; }
+
+.empty { text-align: center; padding: 48px; color: var(--muted); }
+.loader { text-align: center; padding: 24px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <div class="container">
+    <h1>ai-runbooks</h1>
+    <nav>
+      <a href="#/" class="active" data-nav="catalog">Catalog</a>
+      <a href="#/merges" data-nav="merges">Merges</a>
+    </nav>
+  </div>
+</header>
+<div class="container" id="app"><div class="loader">Loading…</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $app = $('#app');
+const API = '';
+
+function toast(msg, ms = 3000) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function ts(epoch) {
+  return new Date(epoch * 1000).toLocaleString();
+}
+
+function fmtSec(s) {
+  const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2,'0')}`;
+}
+
+// --- minimal markdown renderer ---
+function renderMd(md) {
+  if (!md) return '<p class="empty">No runbook content</p>';
+  let html = md
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+    .replace(/^---$/gm, '<hr>')
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>');
+  // wrap consecutive <li> in ol/ul
+  html = html.replace(/((<li>.*<\/li>\n?)+)/g, '<ol>$1</ol>');
+  // paragraphs for orphan lines
+  html = html.split('\n').map(l =>
+    l.trim() && !l.match(/^<(h[1-3]|ol|ul|li|blockquote|hr|pre)/) ? `<p>${l}</p>` : l
+  ).join('\n');
+  // code fences
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+  return html;
+}
+
+function renderDiff(diff) {
+  if (!diff) return '<p class="empty">No diff available</p>';
+  return diff.split('\n').map(l => {
+    const cls = l.startsWith('+') ? 'diff-add' : l.startsWith('-') ? 'diff-del'
+      : l.startsWith('@@') || l.startsWith('---') || l.startsWith('+++') ? 'diff-hdr' : '';
+    return `<div class="diff-line ${cls}">${l.replace(/</g,'&lt;')}</div>`;
+  }).join('');
+}
+
+// --- API helpers ---
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({error: r.statusText}));
+    throw new Error(e.error || e.detail || r.statusText);
+  }
+  return r.json();
+}
+
+// --- routes ---
+async function routeCatalog() {
+  setNav('catalog');
+  const {workflows} = await api('/api/runbooks');
+  if (!workflows.length) {
+    $app.innerHTML = '<div class="empty">No runbooks yet. Record a workflow in the app to get started.</div>';
+    return;
+  }
+  $app.innerHTML = `
+    <h2 style="margin-bottom:12px">Runbook Catalog</h2>
+    <div class="card" style="padding:0;overflow:hidden">
+    <table>
+      <tr><th>Title</th><th>Dominant Context</th><th>Runs</th><th>Status</th><th>Updated</th></tr>
+      ${workflows.map(w => `
+        <tr class="clickable" onclick="location.hash='#/wf/${w.id}'">
+          <td><strong>${esc(w.title)}</strong><br><small style="color:var(--muted)">${esc(w.id)}</small></td>
+          <td>${w.dominant_context ? `<span class="step-context">${esc(w.dominant_context)}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+          <td>${w.runs.length}</td>
+          <td><span class="badge ${w.status === 'active' ? 'badge-active' : 'badge-pending'}">${w.status}</span></td>
+          <td>${ts(w.updated)}</td>
+        </tr>`).join('')}
+    </table></div>`;
+}
+
+async function routeDetail(wfId) {
+  setNav('catalog');
+  const wf = await api(`/api/runbooks/${wfId}`);
+  const activeTab = location.hash.includes('?tab=') ?
+    location.hash.split('?tab=')[1] : 'runbook';
+
+  $app.innerHTML = `
+    <div style="margin-bottom:12px">
+      <a href="#/">&larr; Catalog</a>
+    </div>
+    <h2>${esc(wf.title)}</h2>
+    <div class="info-grid">
+      <div class="info-item"><label>Workflow ID</label><span>${esc(wf.id)}</span></div>
+      <div class="info-item"><label>Dominant Context</label><span>${esc(wf.dominant_context || '—')}</span></div>
+      <div class="info-item"><label>Status</label><span class="badge ${wf.status === 'active' ? 'badge-active' : 'badge-pending'}">${wf.status}</span></div>
+      <div class="info-item"><label>Runs</label><span>${wf.runs.length}</span></div>
+      <div class="info-item"><label>Created</label><span>${ts(wf.created)}</span></div>
+      <div class="info-item"><label>Updated</label><span>${ts(wf.updated)}</span></div>
+    </div>
+    <div class="tabs">
+      <div class="tab ${activeTab==='runbook'?'active':''}" onclick="showTab('${wfId}','runbook')">Runbook</div>
+      <div class="tab ${activeTab==='runs'?'active':''}" onclick="showTab('${wfId}','runs')">Runs (${wf.runs.length})</div>
+      <div class="tab ${activeTab==='edits'?'active':''}" onclick="showTab('${wfId}','edits')">Edits</div>
+    </div>
+    <div id="tab-content"></div>`;
+
+  if (activeTab === 'runbook') renderRunbookTab(wf);
+  else if (activeTab === 'runs') renderRunsTab(wf);
+  else if (activeTab === 'edits') renderEditsTab(wfId);
+}
+
+function showTab(wfId, tab) {
+  location.hash = `#/wf/${wfId}?tab=${tab}`;
+}
+
+let editMode = false;
+function renderRunbookTab(wf) {
+  const tc = $('#tab-content');
+  tc.innerHTML = `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3>Canonical Runbook</h3>
+        <button onclick="toggleEdit('${wf.id}')" id="edit-btn">${editMode ? 'Cancel' : 'Edit'}</button>
+      </div>
+      <div id="runbook-view" class="runbook-md">${renderMd(wf.runbook)}</div>
+      <div id="runbook-edit" style="display:none">
+        <textarea id="runbook-editor">${esc(wf.runbook || '')}</textarea>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button class="btn-primary" onclick="saveRunbook('${wf.id}')">Save</button>
+          <button onclick="toggleEdit('${wf.id}')">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+  editMode = false;
+}
+
+window.toggleEdit = function(wfId) {
+  editMode = !editMode;
+  $('#runbook-view').style.display = editMode ? 'none' : 'block';
+  $('#runbook-edit').style.display = editMode ? 'block' : 'none';
+  $('#edit-btn').textContent = editMode ? 'Cancel' : 'Edit';
+};
+
+window.saveRunbook = async function(wfId) {
+  const content = $('#runbook-editor').value;
+  const editor = localStorage.getItem('editor') ||
+    (localStorage.setItem('editor', prompt('Your name (for edit log):', 'anonymous') || 'anonymous'),
+     localStorage.getItem('editor'));
+  try {
+    await api(`/api/runbooks/${wfId}`, {
+      method: 'PUT', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({content, editor})
+    });
+    toast('Runbook saved');
+    editMode = false;
+    routeDetail(wfId);
+  } catch(e) { toast('Save failed: ' + e.message, 5000); }
+};
+
+async function renderRunsTab(wf) {
+  const tc = $('#tab-content');
+  if (!wf.runs.length) { tc.innerHTML = '<div class="empty">No runs</div>'; return; }
+
+  const latestRun = wf.runs[wf.runs.length - 1];
+  tc.innerHTML = `
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;color:var(--muted)">Select run:</label>
+      <select id="run-select" onchange="loadRun('${wf.id}', this.value)" style="padding:4px 8px;border-radius:4px;border:1px solid var(--border)">
+        ${wf.runs.map(r => `<option value="${r.epoch}" ${r.epoch===latestRun.epoch?'selected':''}>
+          Run ${r.epoch} — ${r.steps} steps ${r.has_runbook?'✓':'○'} runbook ${r.has_transcript?'✓':'○'} transcript
+        </option>`).join('')}
+      </select>
+    </div>
+    <div id="run-detail"><div class="loader">Loading run…</div></div>`;
+  loadRun(wf.id, latestRun.epoch);
+}
+
+window.loadRun = async function(wfId, epoch) {
+  const rd = $('#run-detail');
+  const {steps, transcript} = await api(`/api/runbooks/${wfId}/runs/${epoch}/steps`);
+  const hasVideo = true; // optimistic; the element handles 404 gracefully
+
+  // build transcript lookup by time
+  const txByTime = {};
+  transcript.forEach(seg => {
+    const key = Math.floor(seg.t0);
+    if (!txByTime[key]) txByTime[key] = [];
+    txByTime[key].push(seg);
+  });
+
+  rd.innerHTML = `
+    <div class="card">
+      <div class="info-grid" style="margin-bottom:16px">
+        <div class="info-item"><label>Steps</label><span>${steps.length}</span></div>
+        <div class="info-item"><label>Transcript segments</label><span>${transcript.length}</span></div>
+        <div class="info-item"><label>Source video</label><span style="font-size:12px;word-break:break-all">${esc('' + epoch)}</span></div>
+      </div>
+      <div class="media-panel">
+        <div>
+          <video id="run-video" controls preload="metadata"
+            src="${API}/api/runbooks/${wfId}/runs/${epoch}/media/recording.mov"
+            onerror="this.parentElement.innerHTML='<p class=empty>Recording not available</p>'">
+          </video>
+          ${transcript.length ? `
+          <details style="margin-top:8px">
+            <summary style="cursor:pointer;font-size:13px;color:var(--muted)">Full transcript (${transcript.length} segments)</summary>
+            <div style="max-height:200px;overflow-y:auto;margin-top:4px">
+              ${transcript.map(s => `<div class="transcript-seg" onclick="seekTo(${s.t0})">[${fmtSec(s.t0)}] ${esc(s.text)}</div>`).join('')}
+            </div>
+          </details>` : ''}
+        </div>
+        <div>
+          <h4 style="margin-bottom:8px;font-size:13px;color:var(--muted)">Steps (click to seek)</h4>
+          <div style="max-height:600px;overflow-y:auto">
+          <ol class="step-list">
+            ${steps.map((s, i) => {
+              const conf = s.confidence || 0;
+              const confCls = conf >= 0.7 ? 'high' : 'low';
+              const nearTx = transcript.filter(t => t.t1 >= s.t0 - 3 && t.t0 <= s.t1 + 3);
+              return `
+              <li class="step-item" onclick="seekTo(${s.t0}); highlightStep(this)" data-t0="${s.t0}">
+                <strong>${i+1}. ${esc(s.action || '?')}</strong>
+                ${s.target ? ` — <span>${esc(s.target)}</span>` : ''}
+                ${s.details ? `<br><span style="font-size:12px">${esc(s.details)}</span>` : ''}
+                <div class="step-meta">
+                  <span class="step-context">${esc(s.context || '—')}</span>
+                  <span class="step-confidence ${confCls}">${(conf*100).toFixed(0)}%</span>
+                  <span>[${fmtSec(s.t0)} – ${fmtSec(s.t1)}]</span>
+                </div>
+                ${nearTx.length ? `<div class="step-narration">${nearTx.map(t => esc(t.text)).join(' ')}</div>` : ''}
+              </li>`;
+            }).join('')}
+          </ol>
+          </div>
+        </div>
+      </div>
+    </div>`;
+};
+
+window.seekTo = function(t) {
+  const v = $('#run-video');
+  if (v) { v.currentTime = t; v.play().catch(()=>{}); }
+};
+
+window.highlightStep = function(el) {
+  document.querySelectorAll('.step-item').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+};
+
+async function renderEditsTab(wfId) {
+  const tc = $('#tab-content');
+  const {edits} = await api(`/api/runbooks/${wfId}/edits`);
+  if (!edits.length) { tc.innerHTML = '<div class="empty">No edits yet</div>'; return; }
+  tc.innerHTML = `
+    <div class="card" style="padding:0;overflow:hidden">
+    <table>
+      <tr><th>Time</th><th>Editor</th><th>Kind</th><th>Decision</th><th>Diff</th></tr>
+      ${edits.map((e, i) => `
+        <tr>
+          <td>${ts(e.ts)}</td>
+          <td>${esc(e.editor || '—')}</td>
+          <td><span class="badge badge-merge">${e.kind}</span></td>
+          <td>${esc(e.decision || '—')}${e.merge_id ? `<br><small>${esc(e.merge_id)}</small>` : ''}${e.separated_to ? `<br><small>→ ${esc(e.separated_to)}</small>` : ''}</td>
+          <td>${e.unified_diff ? `<button onclick="toggleDiff(${i})">Show diff</button><div id="diff-${i}" style="display:none;margin-top:4px;max-height:300px;overflow:auto">${renderDiff(e.unified_diff)}</div>` : '—'}</td>
+        </tr>`).join('')}
+    </table></div>`;
+}
+
+window.toggleDiff = function(i) {
+  const d = $(`#diff-${i}`);
+  d.style.display = d.style.display === 'none' ? 'block' : 'none';
+};
+
+async function routeMerges() {
+  setNav('merges');
+  const {pending_merges} = await api('/api/merges');
+  if (!pending_merges.length) {
+    $app.innerHTML = '<div class="empty">No pending merges — all clean.</div>';
+    return;
+  }
+  $app.innerHTML = `<h2 style="margin-bottom:12px">Pending Merges</h2>` +
+    pending_merges.map(m => `
+      <div class="card" id="merge-${esc(m.merge_id)}">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <div>
+            <h3><a href="#/wf/${m.workflow_id}">${esc(m.workflow_id)}</a></h3>
+            <div class="info-grid" style="margin:8px 0">
+              <div class="info-item"><label>Merge ID</label><span style="font-size:12px">${esc(m.merge_id)}</span></div>
+              <div class="info-item"><label>Incoming epoch</label><span>${m.incoming_epoch}</span></div>
+              <div class="info-item"><label>Match confidence</label><span>${m.match ? (m.match.confidence * 100).toFixed(0) + '%' : '—'}</span></div>
+              <div class="info-item"><label>Reason</label><span style="font-size:12px">${esc(m.match?.reason || '—')}</span></div>
+              <div class="info-item"><label>Draft</label><span class="badge ${m.draft ? 'badge-active' : 'badge-pending'}">${m.draft ? 'ready' : 'failed'}</span></div>
+              <div class="info-item"><label>Created</label><span>${ts(m.created)}</span></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0">
+            ${m.draft ? `<button class="btn-green" onclick="doMerge('${m.merge_id}','accept')">Accept merge</button>` : ''}
+            <button class="btn-red" onclick="doMerge('${m.merge_id}','reject')">Keep separate</button>
+          </div>
+        </div>
+        <div id="merge-diff-${esc(m.merge_id)}"><button onclick="showMergeDiff('${m.merge_id}')">Show diff</button></div>
+      </div>`).join('');
+}
+
+window.showMergeDiff = async function(id) {
+  const el = $(`#merge-diff-${CSS.escape(id)}`);
+  try {
+    const d = await api(`/api/merges/${id}`);
+    el.innerHTML = `
+      <details open>
+        <summary style="cursor:pointer;font-weight:600;margin-bottom:8px">Unified diff</summary>
+        <div style="max-height:400px;overflow:auto;border:1px solid var(--border);border-radius:6px">
+          ${renderDiff(d.unified_diff)}
+        </div>
+      </details>`;
+  } catch(e) { el.innerHTML = `<p style="color:var(--red)">${e.message}</p>`; }
+};
+
+window.doMerge = async function(id, action) {
+  const verb = action === 'accept' ? 'Accept this merge? The old runbook is preserved under versions/.'
+    : 'Keep separate? The pending run becomes its own workflow.';
+  if (!confirm(verb)) return;
+  try {
+    await api(`/api/merges/${id}/${action}`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({editor: localStorage.getItem('editor') || 'web-ui'})
+    });
+    toast(action === 'accept' ? 'Merge accepted' : 'Kept separate');
+    routeMerges();
+  } catch(e) { toast('Failed: ' + e.message, 5000); }
+};
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function setNav(page) {
+  document.querySelectorAll('nav a').forEach(a => {
+    a.classList.toggle('active', a.dataset.nav === page);
+  });
+}
+
+// --- router ---
+async function route() {
+  const h = location.hash || '#/';
+  try {
+    if (h.startsWith('#/wf/')) {
+      const id = h.split('#/wf/')[1].split('?')[0];
+      await routeDetail(id);
+    } else if (h.startsWith('#/merges')) {
+      await routeMerges();
+    } else {
+      await routeCatalog();
+    }
+  } catch(e) {
+    $app.innerHTML = `<div class="card" style="color:var(--red)">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>
