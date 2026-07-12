@@ -73,17 +73,33 @@ def call_holo(url, key, model, frames, timeout=120, retries=3):
         }],
     }
     backoff = 10
+    last_err = None
     for attempt in range(retries + 1):
-        resp = requests.post(
-            url, json=body, timeout=timeout,
-            headers={"Authorization": f"Bearer {key}"})
-        if resp.status_code == 429 and attempt < retries:
+        try:
+            resp = requests.post(
+                url, json=body, timeout=timeout,
+                headers={"Authorization": f"Bearer {key}"})
+        except (requests.Timeout, requests.ConnectionError) as exc:
+            # Transient network trouble (read timeout, reset, DNS blip):
+            # retry with backoff instead of losing the pair.
+            last_err = exc
+            if attempt < retries:
+                print(f"analyze_pairs: transient error "
+                      f"({type(exc).__name__}), retry {attempt + 1}/{retries} "
+                      f"in {backoff}s", file=sys.stderr)
+                time.sleep(backoff)
+                backoff *= 2
+                continue
+            raise RuntimeError(f"gave up after {retries} retries: {exc}")
+        if resp.status_code in (429, 500, 502, 503, 504) and attempt < retries:
+            print(f"analyze_pairs: HTTP {resp.status_code}, "
+                  f"retry {attempt + 1}/{retries} in {backoff}s", file=sys.stderr)
             time.sleep(backoff)
             backoff *= 2
             continue
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"]
-    raise RuntimeError("rate-limited after retries")
+    raise RuntimeError(f"exhausted retries: {last_err or 'rate-limited'}")
 
 
 def main() -> int:
@@ -119,13 +135,19 @@ def main() -> int:
             if wait > 0:
                 time.sleep(wait)
             last_call = time.monotonic()
+            t_start = time.monotonic()
             try:
                 reply = call_holo(url, key, model, (a, b))
                 step = parse_json_reply(reply)
             except Exception as exc:  # one bad pair shouldn't kill the run
-                print(f"analyze_pairs: pair {i} failed: {exc}", file=sys.stderr)
+                print(f"analyze_pairs: pair {i} failed after "
+                      f"{time.monotonic() - t_start:.1f}s: {exc}",
+                      file=sys.stderr)
                 continue
+            elapsed = time.monotonic() - t_start
             if step.get("action", "none") == "none":
+                print(f"analyze_pairs: [{i + 1}/{n_pairs}] none "
+                      f"({elapsed:.1f}s)", file=sys.stderr)
                 continue
             record = {
                 "t0": frame_time(a), "t1": frame_time(b),
@@ -137,7 +159,8 @@ def main() -> int:
             out.write(json.dumps(record) + "\n")
             written += 1
             print(f"analyze_pairs: [{i + 1}/{n_pairs}] "
-                  f"{record['action']} ({record['confidence']:.2f})",
+                  f"{record['action']} ({record['confidence']:.2f}) "
+                  f"[{elapsed:.1f}s]",
                   file=sys.stderr)
 
     print(f"analyze_pairs: {written} steps -> {out_path}", file=sys.stderr)
