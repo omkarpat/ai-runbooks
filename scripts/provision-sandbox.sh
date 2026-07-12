@@ -126,6 +126,16 @@ for skill in runbook-builder runbook-runner runbook-merger; do
   fi
 done
 
+# --- 5c. standing agent context (runbook domain contract) --------------------
+# SOUL.md is folded into the agent's system prompt EVERY turn — it carries the
+# runbook-domain contract + kb.py cheatsheet so the agent always knows what
+# runbooks are (skills only carry the long procedures, and are retrieval-gated).
+# openshell upload can't overwrite this dotfile path, so write via exec+base64.
+log "Installing agent standing context (SOUL.md)"
+SOUL_B64="$(base64 < "$REPO_ROOT/sandbox/agent-context/SOUL.md")"
+openshell sandbox exec -n "$SANDBOX" -- sh -lc \
+  "printf %s '$SOUL_B64' | base64 -d > /sandbox/.hermes/SOUL.md"
+
 # --- 6. snapshot (machine-local durability across recreate) ------------------
 log "Creating snapshot 'provisioned'"
 nemohermes runbooks snapshot create --name provisioned || true

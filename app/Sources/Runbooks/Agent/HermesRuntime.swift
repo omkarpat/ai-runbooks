@@ -90,8 +90,58 @@ final class HermesRuntime: AgentRuntime {
     }
 
     private static func userMessage(_ prompt: String, context: RunContext) -> String {
-        guard let recording = context.latestRecordingURL else { return prompt }
-        return prompt + "\n\n[Latest screen recording available at: \(recording.path)]"
+        var message = prompt
+        // Live KB grounding: prepend the current catalog so runbook queries
+        // don't depend on the agent model driving tool calls (weak local
+        // models can't). Best-effort — chat proceeds ungrounded on failure.
+        if let catalog = kbContext() {
+            message = "[Context — \(catalog)]\n\n" + message
+        }
+        if let recording = context.latestRecordingURL {
+            message += "\n\n[Latest screen recording available at: \(recording.path)]"
+        }
+        return message
+    }
+
+    /// Run scripts/kb-context.sh (located like PipelineRunner's script) for a
+    /// compact catalog summary. Returns nil on any failure or empty output.
+    private static func kbContext() -> String? {
+        let fm = FileManager.default
+        var script: URL?
+        for start in [URL(fileURLWithPath: fm.currentDirectoryPath), Bundle.main.bundleURL] {
+            var dir = start
+            for _ in 0..<7 {
+                let candidate = dir.appendingPathComponent("scripts/kb-context.sh")
+                if fm.fileExists(atPath: candidate.path) { script = candidate; break }
+                let parent = dir.deletingLastPathComponent()
+                if parent == dir { break }
+                dir = parent
+            }
+            if script != nil { break }
+        }
+        guard let script else { return nil }
+
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/bin/bash")
+        proc.arguments = [script.path]
+        var env = ProcessInfo.processInfo.environment
+        env["HOME"] = NSHomeDirectory()
+        proc.environment = env
+        let pipe = Pipe()
+        proc.standardOutput = pipe
+        proc.standardError = Pipe()
+        do { try proc.run() } catch { return nil }
+
+        // Bounded wait — grounding must never stall the chat send.
+        let deadline = Date().addingTimeInterval(10)
+        while proc.isRunning && Date() < deadline { usleep(100_000) }
+        if proc.isRunning { proc.terminate(); return nil }
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let text = String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            !text.isEmpty else { return nil }
+        return text
     }
 
     private static func extractContent(_ data: Data) -> String {
