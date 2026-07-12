@@ -1,0 +1,147 @@
+# Next Steps — v2: Stateful KB, Agentic Execution, Web UI
+
+> Decisions locked with owner (2026-07-11): replay via **H Sessions API (cloud
+> browser)** · merge policy **propose + user confirms** · UI/API as **FastAPI
+> inside the sandbox** (serves both REST and static UI files).
+>
+> Prerequisite state: v1 pipeline works end-to-end locally (video → runbook with
+> per-step context + context chain); sandbox onboarded, Hermes API pending
+> (HANDOFF task queue).
+
+## N1 — Knowledge base in the sandbox (stateful)
+
+The sandbox stops being a compute box and becomes the system of record.
+
+- Layout: `/sandbox/kb/` — `catalog.json` (the index) + one directory per
+  **workflow** (not per run):
+  ```
+  /sandbox/kb/
+    catalog.json                    # [{id, title, dominant_context, created,
+                                    #   updated, runs: [...], status}]
+    <workflow-id>/
+      runbook.md                    # current canonical version
+      versions/                     # prior versions (see merge + edits)
+      runs/<epoch>/                 # each contributing run: steps.jsonl,
+                                    #   context_chain.json, transcript.jsonl,
+                                    #   recording.mov, audio.wav, frames/
+      edits.jsonl                   # manual-edit log (N5)
+  ```
+- `run.py` gains a final "ingest" stage: move run artifacts into the KB,
+  register in `catalog.json`. Workflow identity key = `dominant_context`
+  (from the context-chain work) + agent judgment (N3).
+- Persistence: already solved — sandbox state volume + `nemohermes snapshot` /
+  backup-restore. `catalog.json` is the thing the app/UI read; treat it as the
+  API contract's source of truth.
+- SQLite upgrade path when catalog.json outgrows itself; not for the hackathon.
+
+## N2 — Agentic execution (the text box runs runbooks)
+
+The app's chat bar already talks to Hermes (RECORDING_CONTRACT §8). Execution
+adds a second skill and H's phase-2 wiring:
+
+- **Egress + MCP:** add `agp.eu.hcompany.ai` policy (template exists in H's
+  demo: `policies/hai-agent-platform.yaml`), register H's hosted MCP server in
+  `/sandbox/.hermes/config.yaml`, and bake the streamable-HTTP MCP client into
+  our image (H's demo Dockerfile shows the exact fix). Agent gains
+  `run_agent`, `wait_for_session`, `send_message`, etc.
+- **Skill `runbook-runner`:** on "run the <X> runbook" → search `catalog.json`
+  (title + dominant_context match; ask user to disambiguate if >1 candidate) →
+  translate runbook.md steps into a Sessions API task → launch `h/web-surfer-flash`
+  (or custom agent) → stream progress back to the chat bar → report outcome +
+  Agent View replay link.
+- **User input mid-run:** two layers — *before* launch, the agent asks in chat
+  for any `{{parameters}}` the runbook declares (see F1 below); *during* the
+  run, Sessions API `send_message` / observe-and-steer relays agent questions
+  to the chat bar.
+- **Scope honesty:** cloud browser = web workflows only. Runbooks whose steps
+  include local apps get those steps flagged "manual" in the run plan and the
+  agent says so up front. (HoloDesktop CLI local replay = future option.)
+
+## N3 — Ingest dedup + smart merge (propose → confirm)
+
+On every new runbook ingest:
+
+1. Candidate match: same/similar `dominant_context` in catalog, then agent
+   compares steps (an LLM judgment call, not string equality).
+2. **No match →** save as new workflow, UI toast "New runbook: <title>".
+3. **Match →** agent drafts a merged runbook (union of knowledge: fills gaps
+   one run missed — e.g. run A caught the Submit click that run B's sampling
+   missed; keeps the clearer phrasing; notes divergences as alternatives).
+   Draft goes to a **pending-merge queue**; UI shows side-by-side diff
+   (current vs merged) with *Accept merge* / *Keep separate*.
+4. On accept: current `runbook.md` → `versions/`, merged becomes canonical,
+   both runs recorded under `runs/`, catalog `updated` bumped, UI toast
+   "Runbook updated: <title> (now backed by N runs)".
+5. Accept/reject decisions are logged — they're training signal (pairs with N5).
+
+## N4 — Web UI (FastAPI inside the sandbox)
+
+One FastAPI app in `/sandbox/webui/`, serving REST + static frontend from the
+same port (e.g. 8080, forwarded like 8642):
+
+- Endpoints (this IS N6's API, so N6 comes nearly free):
+  `GET /api/runbooks` (catalog) · `GET/PUT /api/runbooks/{id}` (read/edit
+  runbook.md) · `GET /api/runbooks/{id}/runs` · media
+  `GET /api/runs/{id}/recording.mov|audio.wav|frames/*` (range requests for
+  video scrubbing) · `GET /api/merges/pending` + `POST /api/merges/{id}/accept|reject`
+  · `POST /api/runbooks/{id}/execute` (proxies to N2).
+- UI pages: catalog list → runbook detail (rendered md, editable; steps beside
+  the recording player with timestamp-linked seeking — `t0` per step makes
+  click-step-to-jump-video trivial) → runs tab (all merged source runs, each
+  with its video/audio/steps) → pending merges (diff view) → edits tab (N5).
+- Image impact: add `fastapi` + `uvicorn` to `sandbox/image/Dockerfile`;
+  static frontend built on host, uploaded into `/sandbox/webui/static/`.
+- Note: recordings currently stay on the host; N1's ingest moves them into the
+  KB so the UI can serve them. Disk in the sandbox becomes a real budget —
+  add recording size caps or retention to catalog config.
+
+## N5 — Manual-edit tracking (training data)
+
+- Every UI edit (PUT) appends to the workflow's `edits.jsonl`:
+  `{ts, editor, before_hash, after_hash, unified_diff, section}` — plus full
+  before/after snapshots in `versions/`.
+- Merge accept/reject decisions logged in the same shape (`kind: "merge"`).
+- UI: "Edits" tab per runbook + a global training-data view (filter by kind,
+  export JSONL). Nothing is auto-cleaned; this corpus is the future
+  fine-tuning/eval set ("what did humans fix about our generated runbooks").
+
+## N6 — [low priority] Formal API
+
+Mostly satisfied by N4's FastAPI. Remaining work when it matters: auth
+(bearer tokens), stable versioned paths (`/v1/...`), OpenAPI docs (FastAPI
+generates these already), and moving the app's recording-trigger from the
+Hermes chat call to `POST /api/ingest` for structured status instead of
+chat-stream parsing.
+
+---
+
+## Suggested additional features
+
+- **F1 · Parameterization (recommended with N2):** at synthesis time, extract
+  variables from runbooks — typed values like emails, IDs, dates become
+  `{{parameters}}` with the recorded value as example default. Execution asks
+  for them in chat before launch. Turns "replay exactly what I did" into
+  "run my workflow with new inputs" — arguably the product's core value.
+- **F2 · Replay verification + success tracking:** after each N2 run, agent
+  records success/failure per step into the catalog. Repeated failures on a
+  step flag the runbook **stale** (UI badge) — likely the target app's UI
+  changed; prompt to re-record. Gives the KB a health signal.
+- **F3 · Versioning/rollback UI:** `versions/` exists for merges/edits anyway;
+  expose a history slider + one-click rollback. Cheap insurance for bad merges.
+- **F4 · PHI/PII scrub pass (lana.health future):** optional pipeline stage —
+  Holo already OCRs frames; flag detected emails/MRNs/names in steps + blur
+  frames before KB storage. The egress allowlist story + this = the compliance
+  slide.
+- **F5 · Scheduled runs:** Hermes/NemoClaw already support cron + heartbeats —
+  "run the eligibility-check runbook every Monday 8am" is config, not code,
+  once N2 works.
+- **F6 · Export:** runbook.md → .docx/PDF for human SOP distribution
+  (compliance teams love paper).
+
+## Suggested order (hackathon-aware)
+
+N1 → N4 (read-only UI first: catalog + detail + video) → N3 → N2 (+F1) → N5 → F2/F3.
+Rationale: N1+read-only N4 make the "knowledge base" demo real in a day;
+N3's merge diff is a strong wow moment; N2 depends on phase-2 egress/MCP
+plumbing that has the most unknowns, so start it early in parallel if two
+people are free, but don't gate the demo on it.
