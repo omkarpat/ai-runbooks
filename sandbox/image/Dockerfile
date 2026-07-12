@@ -38,8 +38,17 @@ RUN apt-get update \
 # unnecessary for two endpoints.
 RUN uv pip install --python /opt/hermes/.venv/bin/python -U requests
 
-# Phase 2 (Sessions API replay via hosted MCP) will additionally need the
-# streamable-HTTP MCP client — see H's demo Dockerfile. Not installed in v1.
+# N2 note (verified 2026-07-11): the hosted-agent-platform executor uses the
+# Streamable HTTP MCP client, but this image does NOT need to add it. The
+# DEFAULT full Hermes image (what provision-sandbox.sh onboards — see that
+# script's step 1) is built through NemoClaw's own hermes Dockerfile, which
+# carries a build-time guard asserting `mcp._MCP_AVAILABLE` and
+# `mcp_tool._MCP_HTTP_AVAILABLE`. `nemohermes <sandbox> mcp add` fails closed
+# with rebuild guidance if that support is missing; ours passed (tools/list
+# returned 6 tools over HTTPS), so HTTP-MCP is already present. This custom
+# image remains unused by provisioning (it builds on the bare base and omits
+# the agent-runtime layer — see provision-sandbox.sh header); kept only as the
+# documented fallback if a future base image drops HTTP-MCP support.
 
 # --- Fail the build early if anything is missing ------------------------------
 RUN ffmpeg -version >/dev/null \

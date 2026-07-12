@@ -38,12 +38,9 @@ struct FloatingBarView: View {
         }
         .frame(width: 616)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.28), radius: 22, x: 0, y: 10)
-        .padding(10)                       // breathing room for the shadow inside the clear window
+        // Clip to the rounded shape so the panel's native window shadow follows
+        // the pill exactly — no transparent margin/halo around it.
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .onAppear { focused = true }
     }
 

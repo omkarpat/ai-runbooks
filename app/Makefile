@@ -10,7 +10,7 @@ BINPATH := .build/$(CONFIG)/$(APP)
 # See `make signing-cert` to create one.
 SIGN_IDENTITY ?= -
 
-.PHONY: build bundle run open clean signing-cert
+.PHONY: build bundle run open clean signing-cert icon
 
 build:
 	swift build -c $(CONFIG)
@@ -21,6 +21,7 @@ bundle: build
 	mkdir -p $(BUNDLE)/Contents/Resources
 	cp $(BINPATH) $(BUNDLE)/Contents/MacOS/$(APP)
 	cp Resources/Info.plist $(BUNDLE)/Contents/Info.plist
+	[ -f Resources/Runbooks.icns ] && cp Resources/Runbooks.icns $(BUNDLE)/Contents/Resources/Runbooks.icns || true
 	codesign --force --sign "$(SIGN_IDENTITY)" $(BUNDLE)
 	@echo "Built ./$(BUNDLE) (signed: $(SIGN_IDENTITY))"
 
@@ -34,6 +35,23 @@ open: bundle
 
 clean:
 	rm -rf .build $(BUNDLE)
+
+# Regenerate Resources/Runbooks.icns from scripts/generate-icon.swift.
+icon:
+	swift scripts/generate-icon.swift /tmp/rb-icon.png
+	rm -rf /tmp/rb.iconset && mkdir -p /tmp/rb.iconset
+	sips -z 16 16     /tmp/rb-icon.png --out /tmp/rb.iconset/icon_16x16.png      >/dev/null
+	sips -z 32 32     /tmp/rb-icon.png --out /tmp/rb.iconset/icon_16x16@2x.png   >/dev/null
+	sips -z 32 32     /tmp/rb-icon.png --out /tmp/rb.iconset/icon_32x32.png      >/dev/null
+	sips -z 64 64     /tmp/rb-icon.png --out /tmp/rb.iconset/icon_32x32@2x.png   >/dev/null
+	sips -z 128 128   /tmp/rb-icon.png --out /tmp/rb.iconset/icon_128x128.png    >/dev/null
+	sips -z 256 256   /tmp/rb-icon.png --out /tmp/rb.iconset/icon_128x128@2x.png >/dev/null
+	sips -z 256 256   /tmp/rb-icon.png --out /tmp/rb.iconset/icon_256x256.png    >/dev/null
+	sips -z 512 512   /tmp/rb-icon.png --out /tmp/rb.iconset/icon_256x256@2x.png >/dev/null
+	sips -z 512 512   /tmp/rb-icon.png --out /tmp/rb.iconset/icon_512x512.png    >/dev/null
+	sips -z 1024 1024 /tmp/rb-icon.png --out /tmp/rb.iconset/icon_512x512@2x.png >/dev/null
+	mkdir -p Resources && iconutil -c icns /tmp/rb.iconset -o Resources/Runbooks.icns
+	@echo "Wrote Resources/Runbooks.icns"
 
 # Make Screen Recording / Mic grants persist across rebuilds by signing with a
 # stable self-signed identity (ad-hoc signing does not persist TCC grants).

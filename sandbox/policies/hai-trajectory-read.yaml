@@ -1,0 +1,46 @@
+# OpenShell network-policy preset: allow the sandbox to READ a session's public
+# trajectory (event log) from the H agent platform.
+#
+# Why: `mcp add` generates a `protocol: mcp` policy scoped to the `/mcp` path
+# only, so the runbook-runner skill can drive sessions but CANNOT fetch the
+# per-step event log. The E2 smoke run (N2 §3.4, 2026-07-11) proved that
+# `share_session` returns a PUBLIC JSON trajectory at
+#   https://agp.eu.hcompany.ai/share/api/v1/trajectories/<id>
+# carrying a full `events[]` action log. Granting GET on that path turns the
+# runner's per-step report from self-reported (the agent grading its own work)
+# into evidence-based (parsed from observed events) — the better source per
+# N2 §4.7 and the foundation for F2 stale-detection.
+#
+# Least-privilege: GET only, and no credential — the document is public
+# (share_session sets is_public=true), so this is a read of already-shared data,
+# distinct from the credentialed MCP channel.
+#
+# Path-enforcement caveat (verified 2026-07-11): OpenShell v0.0.72 enforces
+# host+port+method for `protocol: rest`, but NOT the path. A GET to another path
+# on this host reached the platform (returned its own 403) rather than being
+# blocked at egress. So in practice this grants GET to agp.eu.hcompany.ai:443,
+# not solely the trajectories path. Still narrow (GET-only, single host, public
+# data). The path rule below documents intent and takes effect if/when OpenShell
+# adds REST path enforcement.
+#
+# Apply:
+#   nemohermes runbooks policy-add --from-file sandbox/policies/hai-trajectory-read.yaml --yes
+#   nemohermes runbooks policy-list   # confirm agp.eu.hcompany.ai GET rule listed
+
+preset:
+  name: hai-trajectory-read
+  description: "H agent platform — read public session trajectory (event log) for evidence-based per-step reports"
+
+network_policies:
+  hai-trajectory-read:
+    name: hai-trajectory-read
+    endpoints:
+      - host: agp.eu.hcompany.ai
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/share/api/v1/trajectories/*" }
+    binaries:
+      - { path: /opt/hermes/.venv/bin/python }
+      - { path: /usr/bin/python3* }

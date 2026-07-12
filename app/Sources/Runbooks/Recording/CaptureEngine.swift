@@ -45,13 +45,19 @@ actor CaptureEngine {
         config.capturesAudio = true               // system audio
         config.sampleRate = 48_000
         config.channelCount = 2
-        config.captureMicrophone = true           // macOS 15+ mic capture
+        // Microphone capture via ScreenCaptureKit is macOS 15+. On macOS 14 we
+        // still record screen + system audio (no mic track).
+        if #available(macOS 15, *) {
+            config.captureMicrophone = true
+        }
 
         let writer = try RecordingWriter(url: url, width: config.width, height: config.height)
         let stream = SCStream(filter: filter, configuration: config, delegate: writer)
         try stream.addStreamOutput(writer, type: .screen, sampleHandlerQueue: outputQueue)
         try stream.addStreamOutput(writer, type: .audio, sampleHandlerQueue: outputQueue)
-        try stream.addStreamOutput(writer, type: .microphone, sampleHandlerQueue: outputQueue)
+        if #available(macOS 15, *) {
+            try stream.addStreamOutput(writer, type: .microphone, sampleHandlerQueue: outputQueue)
+        }
 
         try await stream.startCapture()
         self.stream = stream
@@ -125,12 +131,13 @@ final class RecordingWriter: NSObject, SCStreamOutput, SCStreamDelegate, @unchec
             guard sessionStarted, writer.status == .writing, systemAudioInput.isReadyForMoreMediaData else { return }
             systemAudioInput.append(sampleBuffer)
 
-        case .microphone:
-            guard sessionStarted, writer.status == .writing, micInput.isReadyForMoreMediaData else { return }
-            micInput.append(sampleBuffer)
-
-        @unknown default:
-            break
+        default:
+            // `.microphone` is macOS 15+, so it can't be a case label on a macOS 14
+            // deployment target — handle it here behind an availability check.
+            if #available(macOS 15, *), type == .microphone {
+                guard sessionStarted, writer.status == .writing, micInput.isReadyForMoreMediaData else { return }
+                micInput.append(sampleBuffer)
+            }
         }
     }
 

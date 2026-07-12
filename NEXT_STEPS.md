@@ -7,6 +7,11 @@
 > Prerequisite state: v1 pipeline works end-to-end locally (video → runbook with
 > per-step context + context chain); sandbox onboarded, Hermes API pending
 > (HANDOFF task queue).
+>
+> **Update (2026-07-11):** owner flipped the order — **N2 ships first**, then N1.
+> Detailed plan: [N2_EXECUTION_PLAN.md](N2_EXECUTION_PLAN.md). EU endpoint
+> (`agp.eu.hcompany.ai`) is **locked** for the PoC (won't go to prod as-is);
+> region is not a decision point anymore.
 
 ## N1 — Knowledge base in the sandbox (stateful) ✅ implemented
 
@@ -65,12 +70,56 @@ adds a second skill and H's phase-2 wiring:
   include local apps get those steps flagged "manual" in the run plan and the
   agent says so up front. (HoloDesktop CLI local replay = future option.)
 
-## N3 — Ingest dedup + smart merge (propose → confirm) — deferred behind N2
+### ✅ Implemented — 2026-07-11 (E1–E4; end-to-end run verified)
 
-> Deferred (2026-07-11): merge accept/reject will be driven through Hermes
-> chat, so N3 waits for N2's skill wiring. Implementation extends
-> `pipeline/kb.py` with `merges` / `show-merge` / `accept-merge` /
-> `reject-merge` subcommands (same JSON-stdout conventions).
+Full record in [N2_EXECUTION_PLAN.md](N2_EXECUTION_PLAN.md); the plan's original
+E1 approach was superseded by better tooling. What actually shipped:
+
+- **Egress + MCP — via native managed MCP, not hand-written config.** NemoClaw
+  v0.0.79 ships `nemohermes <sandbox> mcp add <server> --url <url> --env KEY`.
+  One command created the OpenShell credential provider, generated the
+  `protocol: mcp` egress policy for `agp.eu.hcompany.ai`, and wrote
+  `/sandbox/.hermes/config.yaml` — with the `hk-` key held in OpenShell's
+  provider store and present in the sandbox only as an
+  `openshell:resolve:env:HAI_AGENT_MCP_TOKEN` placeholder (never plaintext, as
+  the original plan would have). **No custom image needed** — the default full
+  Hermes image already carries HTTP-MCP support (`mcp add` fails closed with
+  rebuild guidance otherwise). `hermes mcp test` discovered all six tools
+  (`run_agent`, `wait_for_session`, `list_agents`, `send_message`,
+  `cancel_session`, `share_session`); blocked-host egress negative test recorded.
+- **Skill [`runbook-runner`](sandbox/skills/runbook-runner/SKILL.md):** find →
+  plan (web vs manual/local classification) → F1-lite params → confirm gate
+  (with idempotence warning; `run_agent`'s native `idempotency_key` backs it) →
+  launch `h/web-surfer-flash` → bounded-poll stream (`send_message` relay,
+  `cancel_session` on stop) → **evidence-based** per-step report + replay link.
+  Runbook lookup is isolated in the "find" step as the N1 `catalog.json` seam.
+- **Report source — evidence-based, not self-reported.** `wait_for_session`
+  returns only terminal `{status, answer, done}`, but `share_session` yields a
+  public JSON trajectory (`events[]`, `status`, `metrics`). New egress preset
+  [`hai-trajectory-read`](sandbox/policies/hai-trajectory-read.yaml) lets the
+  runner fetch it in-sandbox, so completion/duration/step-count come from
+  observed evidence and recap-vs-trajectory mismatches are surfaced. This is
+  F2's foundation.
+- **End-to-end verified.** "Run the … runbook" through the chat API drove the
+  4-web-step Google Forms runbook: agent showed the plan, launched the cloud
+  browser, hit a Google login wall, and correctly reported step 1 done + 2–4
+  **skipped** (not falsely done) — cross-checked against the trajectory
+  (`completed`, 3 browser actions, no submission) — with duration and replay
+  link. Failure taxonomy label applied: `blocked: login required`.
+- **Automated:** all of the above folded into
+  [`scripts/provision-sandbox.sh`](scripts/provision-sandbox.sh) (MCP register +
+  trajectory-read policy + skill installs), so a fresh machine reproduces it.
+- **Still open:** measure platform quota/cost under load; exercise the mid-run
+  question relay (the login-wall run didn't trigger an agent question); a
+  synthetic target without a login wall for a clean all-steps-done demo.
+
+## N3 — Ingest dedup + smart merge (propose → confirm)
+
+> Deferred behind N2 (2026-07-11): merge accept/reject is driven through
+> Hermes chat, so N3 waited on N2's skill wiring — **N2 has since shipped, so
+> N3 is unblocked.** Implementation extends `pipeline/kb.py` with `merges` /
+> `show-merge` / `accept-merge` / `reject-merge` subcommands (same
+> JSON-stdout conventions).
 
 On every new runbook ingest:
 
@@ -153,8 +202,18 @@ chat-stream parsing.
 
 ## Suggested order (hackathon-aware)
 
+**Current (owner decision 2026-07-11):** N2 (+F1-lite, see
+[N2_EXECUTION_PLAN.md](N2_EXECUTION_PLAN.md)) → N1 → N4 (read-only UI: catalog +
+detail + video) → N3 → N5 → F2/F3. N2's egress/MCP plumbing has the most
+unknowns, so it goes first; its runbook lookup is built with a one-step seam
+that N1's catalog.json replaces.
+
+<details><summary>Original order (superseded)</summary>
+
 N1 → N4 (read-only UI first: catalog + detail + video) → N3 → N2 (+F1) → N5 → F2/F3.
 Rationale: N1+read-only N4 make the "knowledge base" demo real in a day;
 N3's merge diff is a strong wow moment; N2 depends on phase-2 egress/MCP
 plumbing that has the most unknowns, so start it early in parallel if two
 people are free, but don't gate the demo on it.
+
+</details>

@@ -69,10 +69,33 @@ log "Applying egress policies"
 # debian-apt: ffmpeg install (step 4). openai-api-direct: direct api.openai.com
 # (usually unnecessary — the gateway proxies OpenAI via inference.local — but
 # included per project config; harmless if unused).
-for f in holo-models-api gradium-stt github-agent debian-apt openai; do
+# hai-trajectory-read: lets runbook-runner read the public session trajectory
+# (event log) for evidence-based per-step reports (N2 §4.7 fix).
+for f in holo-models-api gradium-stt github-agent debian-apt openai hai-trajectory-read; do
   nemohermes runbooks policy-add --from-file "$REPO_ROOT/sandbox/policies/$f.yaml" --yes
 done
 nemohermes runbooks policy-add github --yes    # built-in: git -> github.com
+
+# --- 3b. register the H hosted-agent-platform MCP server (N2/E1) -------------
+# Native managed MCP (NemoClaw v0.0.74+): this ONE command creates the OpenShell
+# credential provider, generates the `protocol: mcp` egress policy for
+# agp.eu.hcompany.ai, and writes the /sandbox/.hermes/config.yaml entry with an
+# `openshell:resolve:env:` placeholder. The raw hk- key NEVER lands in the
+# sandbox — it stays in OpenShell's provider store and is resolved only at
+# egress. This supersedes N2's original hand-written policy+config approach
+# (that would have written the bearer token into the config as plaintext).
+# The default full Hermes image already carries HTTP-MCP support, so no custom
+# image is needed; `mcp add` fails closed with rebuild guidance if it doesn't.
+if [ -n "$HAI_API_KEY" ]; then
+  log "Registering hai-agent-platform MCP server (agp.eu.hcompany.ai)"
+  HAI_AGENT_MCP_TOKEN="$HAI_API_KEY" \
+    nemohermes runbooks mcp add hai-agent-platform \
+      --url https://agp.eu.hcompany.ai/mcp \
+      --env HAI_AGENT_MCP_TOKEN
+  nemohermes runbooks mcp status hai-agent-platform || true
+else
+  echo "WARN: H_API_KEY missing — skipping hai-agent-platform MCP (runbook-runner needs it)"
+fi
 
 # --- 4. install ffmpeg at runtime (not in the default image) ----------------
 log "Installing ffmpeg via apt (needs debian-apt egress from step 3)"
@@ -93,6 +116,14 @@ TMP_ENV="$(mktemp)"
 } > "$TMP_ENV"
 openshell sandbox upload "$SANDBOX" "$TMP_ENV" /sandbox/.env
 rm -f "$TMP_ENV"
+
+# --- 5b. install skills (builder = record→runbook, runner = N2 execution) ----
+log "Installing skills (runbook-builder, runbook-runner)"
+for skill in runbook-builder runbook-runner; do
+  if [ -f "$REPO_ROOT/sandbox/skills/$skill/SKILL.md" ]; then
+    nemohermes runbooks skill install "$REPO_ROOT/sandbox/skills/$skill"
+  fi
+done
 
 # --- 6. snapshot (machine-local durability across recreate) ------------------
 log "Creating snapshot 'provisioned'"
