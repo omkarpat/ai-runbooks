@@ -36,7 +36,7 @@ final class FloatingBarController {
         panel.isMovableByWindowBackground = true
         panel.backgroundColor = .clear
         panel.isOpaque = false
-        panel.hasShadow = false                 // SwiftUI draws its own shadow
+        panel.hasShadow = true                  // native shadow follows the clipped pill
         panel.contentView = hosting
         panel.setContentSize(hosting.fittingSize)
 

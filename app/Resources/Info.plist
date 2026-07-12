@@ -10,6 +10,8 @@
     <string>com.getsphere.airunbooks</string>
     <key>CFBundleExecutable</key>
     <string>Runbooks</string>
+    <key>CFBundleIconFile</key>
+    <string>Runbooks</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -17,7 +19,7 @@
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>LSMinimumSystemVersion</key>
-    <string>15.0</string>
+    <string>14.0</string>
     <key>LSUIElement</key>
     <true/>
     <key>NSMicrophoneUsageDescription</key>
