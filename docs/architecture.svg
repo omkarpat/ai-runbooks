@@ -1,175 +1,117 @@
-<svg viewBox="0 0 1080 760" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, -apple-system, sans-serif">
-  <title>ai-runbooks v2 architecture: recorder app + NemoClaw Hermes agent + stateful KB (N1/N3) + H agent platform (N2)</title>
+<svg viewBox="0 0 860 520" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, -apple-system, sans-serif">
+  <title>ai-runbooks architecture: NemoClaw sandbox + H Company APIs</title>
   <defs>
     <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
     </marker>
-    <marker id="arb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/>
+    <marker id="arp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#db2777"/>
+    </marker>
+    <marker id="arg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#059669"/>
     </marker>
   </defs>
-  <rect x="0" y="0" width="1080" height="760" fill="#ffffff"/>
+  <rect x="0" y="0" width="860" height="520" fill="#ffffff"/>
 
-  <!-- ===================== HOST ===================== -->
-  <rect x="20" y="20" width="270" height="720" rx="10" fill="none" stroke="#9ca3af" stroke-dasharray="5 4"/>
-  <text x="36" y="46" font-size="13" font-weight="600" fill="#111827">HOST · Mac</text>
-
-  <!-- app -->
-  <rect x="36" y="62" width="238" height="96" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
-  <text x="155" y="84" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">macOS app (menu bar)</text>
-  <text x="155" y="101" font-size="11" fill="#374151" text-anchor="middle">record screen + narration → .mov</text>
-  <text x="155" y="117" font-size="11" fill="#374151" text-anchor="middle">chat bar → Hermes API :8642</text>
-  <text x="155" y="133" font-size="10" fill="#2563eb" text-anchor="middle">grounding: kb-context.sh prepends</text>
-  <text x="155" y="146" font-size="10" fill="#2563eb" text-anchor="middle">live catalog to every message</text>
-
-  <!-- recording -->
-  <rect x="36" y="184" width="238" height="52" rx="8" fill="#f9fafb" stroke="#d1d5db"/>
-  <text x="155" y="206" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">recording .mov + .json sidecar</text>
-  <text x="155" y="223" font-size="10" fill="#6b7280" text-anchor="middle">per RECORDING_CONTRACT.md</text>
-
-  <!-- ollama -->
-  <rect x="36" y="262" width="238" height="66" rx="8" fill="#f9fafb" stroke="#d1d5db"/>
-  <text x="155" y="284" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">Ollama · llama3.1:8b</text>
-  <text x="155" y="301" font-size="11" fill="#6b7280" text-anchor="middle">agent brain + pipeline synthesis</text>
-  <text x="155" y="317" font-size="10" fill="#6b7280" text-anchor="middle">(SETUP.md: gpt-5.6-luna via OpenAI alt.)</text>
-
-  <!-- cli -->
-  <rect x="36" y="354" width="238" height="66" rx="8" fill="#f9fafb" stroke="#d1d5db"/>
-  <text x="155" y="376" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">nemohermes / openshell CLI</text>
-  <text x="155" y="393" font-size="11" fill="#6b7280" text-anchor="middle">provision-sandbox.sh · policies</text>
-  <text x="155" y="409" font-size="11" fill="#6b7280" text-anchor="middle">skills · SOUL.md · mcp add · snapshots</text>
-
-  <!-- ordering note -->
-  <rect x="36" y="446" width="238" height="70" rx="8" fill="#fffbeb" stroke="#fcd34d"/>
-  <text x="155" y="466" font-size="11" font-weight="600" fill="#92400e" text-anchor="middle">provision order matters</text>
-  <text x="155" y="482" font-size="10" fill="#92400e" text-anchor="middle">onboard → policies → mcp add →</text>
-  <text x="155" y="496" font-size="10" fill="#92400e" text-anchor="middle">uploads/skills → config overrides LAST</text>
-  <text x="155" y="510" font-size="10" fill="#92400e" text-anchor="middle">(config drift quarantines managed ops)</text>
-
-  <!-- ===================== SANDBOX ===================== -->
-  <rect x="320" y="20" width="440" height="720" rx="10" fill="none" stroke="#6366f1" stroke-dasharray="5 4"/>
-  <text x="336" y="46" font-size="13" font-weight="600" fill="#312e81">NemoClaw SANDBOX · deny-by-default egress</text>
+  <!-- ===================== NEMOCLAW SANDBOX ===================== -->
+  <rect x="20" y="20" width="520" height="480" rx="12" fill="#f5f3ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="36" y="46" font-size="14" font-weight="700" fill="#312e81">NemoClaw Sandbox</text>
+  <text x="250" y="46" font-size="11" fill="#6366f1">deny-by-default egress · OpenAI-compat API :8642</text>
 
   <!-- hermes agent -->
-  <rect x="336" y="62" width="408" height="118" rx="8" fill="#eef2ff" stroke="#a5b4fc"/>
-  <text x="540" y="84" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">Hermes agent · OpenAI-compat API :8642</text>
-  <text x="540" y="101" font-size="10" fill="#4338ca" text-anchor="middle">SOUL.md standing context: runbook domain contract + kb.py cheatsheet (always in prompt)</text>
-  <rect x="348" y="112" width="122" height="54" rx="6" fill="#ffffff" stroke="#c7d2fe"/>
-  <text x="409" y="132" font-size="10" font-weight="600" fill="#111827" text-anchor="middle">runbook-builder</text>
-  <text x="409" y="146" font-size="9" fill="#6b7280" text-anchor="middle">record → runbook,</text>
-  <text x="409" y="158" font-size="9" fill="#6b7280" text-anchor="middle">ingest + merge propose</text>
-  <rect x="479" y="112" width="122" height="54" rx="6" fill="#ffffff" stroke="#c7d2fe"/>
-  <text x="540" y="132" font-size="10" font-weight="600" fill="#111827" text-anchor="middle">runbook-runner</text>
-  <text x="540" y="146" font-size="9" fill="#6b7280" text-anchor="middle">catalog lookup → plan →</text>
-  <text x="540" y="158" font-size="9" fill="#6b7280" text-anchor="middle">confirm → cloud execute</text>
-  <rect x="610" y="112" width="122" height="54" rx="6" fill="#ffffff" stroke="#c7d2fe"/>
-  <text x="671" y="132" font-size="10" font-weight="600" fill="#111827" text-anchor="middle">runbook-merger</text>
-  <text x="671" y="146" font-size="9" fill="#6b7280" text-anchor="middle">merge queue review,</text>
-  <text x="671" y="158" font-size="9" fill="#6b7280" text-anchor="middle">accept / keep separate</text>
+  <rect x="36" y="62" width="488" height="100" rx="8" fill="#eef2ff" stroke="#a5b4fc"/>
+  <text x="280" y="82" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Hermes Agent</text>
+  <text x="280" y="98" font-size="10" fill="#4338ca" text-anchor="middle">SOUL.md standing context — always knows what runbooks are + kb.py cheatsheet</text>
+  <rect x="48" y="108" width="150" height="42" rx="6" fill="#fff" stroke="#c7d2fe"/>
+  <text x="123" y="126" font-size="11" font-weight="600" fill="#111827" text-anchor="middle">runbook-builder</text>
+  <text x="123" y="141" font-size="9" fill="#6b7280" text-anchor="middle">record → runbook → ingest</text>
+  <rect x="208" y="108" width="150" height="42" rx="6" fill="#fff" stroke="#c7d2fe"/>
+  <text x="283" y="126" font-size="11" font-weight="600" fill="#111827" text-anchor="middle">runbook-runner</text>
+  <text x="283" y="141" font-size="9" fill="#6b7280" text-anchor="middle">plan → confirm → execute</text>
+  <rect x="368" y="108" width="150" height="42" rx="6" fill="#fff" stroke="#c7d2fe"/>
+  <text x="443" y="126" font-size="11" font-weight="600" fill="#111827" text-anchor="middle">runbook-merger</text>
+  <text x="443" y="141" font-size="9" fill="#6b7280" text-anchor="middle">diff → accept / separate</text>
 
   <!-- pipeline -->
-  <rect x="336" y="212" width="408" height="128" rx="8" fill="#f9fafb" stroke="#d1d5db"/>
-  <text x="540" y="234" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">pipeline · run.py (video → runbook)</text>
-  <text x="540" y="253" font-size="11" fill="#374151" text-anchor="middle">extract_frames ∥ extract_audio → transcribe (Gradium)</text>
-  <text x="540" y="270" font-size="11" fill="#374151" text-anchor="middle">→ analyze_pairs (Holo, per-step context + chain)</text>
-  <text x="540" y="287" font-size="11" fill="#374151" text-anchor="middle">→ synthesize (llm.py → SYNTH_URL) → runbook.md</text>
-  <text x="540" y="308" font-size="10" fill="#6b7280" text-anchor="middle">--skip-synthesis (agent writes runbook + ingests) · --skip-ingest</text>
-  <text x="540" y="326" font-size="10" fill="#6b7280" text-anchor="middle">ffmpeg apt-installed at runtime · /sandbox/.env keys</text>
+  <rect x="36" y="184" width="488" height="80" rx="8" fill="#fff" stroke="#d1d5db"/>
+  <text x="280" y="206" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Pipeline · run.py</text>
+  <text x="280" y="224" font-size="10" fill="#374151" text-anchor="middle">extract frames ∥ extract audio → transcribe → analyze pairs → synthesize → runbook.md</text>
+  <text x="280" y="240" font-size="10" fill="#6b7280" text-anchor="middle">Holo vision (per-step context chain) · Gradium STT · LLM synthesis</text>
+  <text x="280" y="254" font-size="9" fill="#6b7280" text-anchor="middle">auto-ingest into KB on completion</text>
 
-  <!-- kb -->
-  <rect x="336" y="372" width="408" height="204" rx="8" fill="#ecfdf5" stroke="#6ee7b7"/>
-  <text x="540" y="394" font-size="12" font-weight="600" fill="#065f46" text-anchor="middle">knowledge base · /sandbox/kb (N1 + N3, system of record)</text>
-  <text x="540" y="412" font-size="11" fill="#065f46" text-anchor="middle">kb.py — JSON CLI (contract for skills, N2 + web UI, N4)</text>
-  <rect x="352" y="426" width="180" height="134" rx="6" fill="#ffffff" stroke="#a7f3d0"/>
-  <text x="442" y="446" font-size="10" font-weight="600" fill="#111827" text-anchor="middle">catalog.json</text>
-  <text x="442" y="462" font-size="9" fill="#374151" text-anchor="middle">workflows: id · title · dominant</text>
-  <text x="442" y="476" font-size="9" fill="#374151" text-anchor="middle">context · status · runs[]</text>
-  <text x="442" y="492" font-size="9" fill="#374151" text-anchor="middle">pending_merges[]</text>
-  <text x="442" y="514" font-size="9" fill="#6b7280" text-anchor="middle">&lt;workflow&gt;/runbook.md · versions/</text>
-  <text x="442" y="528" font-size="9" fill="#6b7280" text-anchor="middle">runs/&lt;epoch&gt;/ (full artifacts +</text>
-  <text x="442" y="542" font-size="9" fill="#6b7280" text-anchor="middle">recording copy) · edits.jsonl</text>
-  <rect x="548" y="426" width="180" height="134" rx="6" fill="#ffffff" stroke="#a7f3d0"/>
-  <text x="638" y="446" font-size="10" font-weight="600" fill="#111827" text-anchor="middle">ingest dedup + merge (N3)</text>
-  <text x="638" y="462" font-size="9" fill="#374151" text-anchor="middle">dominant-context pre-filter</text>
-  <text x="638" y="476" font-size="9" fill="#374151" text-anchor="middle">→ LLM same-workflow judgment</text>
-  <text x="638" y="490" font-size="9" fill="#374151" text-anchor="middle">→ LLM merge draft → pending/</text>
-  <text x="638" y="508" font-size="9" fill="#065f46" text-anchor="middle">propose + user confirms (chat):</text>
-  <text x="638" y="522" font-size="9" fill="#065f46" text-anchor="middle">accept → versions/ + canonical</text>
-  <text x="638" y="536" font-size="9" fill="#065f46" text-anchor="middle">reject → separate workflow</text>
-  <text x="638" y="552" font-size="9" fill="#6b7280" text-anchor="middle">LLM failure ⇒ safe no-match</text>
+  <!-- knowledge base -->
+  <rect x="36" y="286" width="488" height="120" rx="8" fill="#ecfdf5" stroke="#6ee7b7"/>
+  <text x="280" y="308" font-size="13" font-weight="600" fill="#065f46" text-anchor="middle">Knowledge Base · /sandbox/kb</text>
+  <text x="280" y="326" font-size="10" fill="#065f46" text-anchor="middle">kb.py JSON CLI — single interface for skills, web UI, and agent</text>
+  <rect x="48" y="338" width="224" height="56" rx="6" fill="#fff" stroke="#a7f3d0"/>
+  <text x="160" y="356" font-size="10" font-weight="600" fill="#111827" text-anchor="middle">catalog.json</text>
+  <text x="160" y="370" font-size="9" fill="#374151" text-anchor="middle">workflows · runs · pending_merges</text>
+  <text x="160" y="383" font-size="9" fill="#6b7280" text-anchor="middle">runbook.md · versions/ · edits.jsonl</text>
+  <rect x="284" y="338" width="228" height="56" rx="6" fill="#fff" stroke="#a7f3d0"/>
+  <text x="398" y="356" font-size="10" font-weight="600" fill="#111827" text-anchor="middle">Dedup + Smart Merge</text>
+  <text x="398" y="370" font-size="9" fill="#374151" text-anchor="middle">dominant-context match → LLM judgment</text>
+  <text x="398" y="383" font-size="9" fill="#374151" text-anchor="middle">→ merge draft → propose + confirm</text>
 
-  <!-- inference route -->
-  <rect x="336" y="606" width="408" height="50" rx="8" fill="#f9fafb" stroke="#d1d5db"/>
-  <text x="540" y="626" font-size="11" font-weight="600" fill="#111827" text-anchor="middle">inference.local (gateway proxy)</text>
-  <text x="540" y="642" font-size="10" fill="#6b7280" text-anchor="middle">agent brain + SYNTH_URL → host Ollama (key never in sandbox)</text>
+  <!-- web dashboard -->
+  <rect x="36" y="422" width="488" height="48" rx="8" fill="#fff" stroke="#d1d5db"/>
+  <text x="280" y="444" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">Web Dashboard · :9090</text>
+  <text x="280" y="460" font-size="10" fill="#6b7280" text-anchor="middle">catalog · runbook detail · video + step seeking · executions · merge diffs · edits</text>
 
-  <!-- videos -->
-  <rect x="336" y="676" width="408" height="44" rx="8" fill="#f9fafb" stroke="#d1d5db"/>
-  <text x="540" y="694" font-size="11" font-weight="600" fill="#111827" text-anchor="middle">/sandbox/videos · /sandbox/runbooks (run dirs)</text>
-  <text x="540" y="710" font-size="10" fill="#6b7280" text-anchor="middle">uploads land here; ingest copies (never moves) into the KB</text>
+  <!-- ===================== H COMPANY APIS ===================== -->
+  <rect x="580" y="20" width="260" height="480" rx="12" fill="#fdf2f8" stroke="#f9a8d4" stroke-width="1.5"/>
+  <text x="596" y="46" font-size="14" font-weight="700" fill="#9d174d">H Company APIs</text>
+  <text x="596" y="64" font-size="10" fill="#db2777">egress-allowlisted endpoints</text>
 
-  <!-- ===================== CLOUD ===================== -->
-  <rect x="790" y="20" width="270" height="720" rx="10" fill="none" stroke="#9ca3af" stroke-dasharray="5 4"/>
-  <text x="806" y="46" font-size="13" font-weight="600" fill="#111827">EXTERNAL · egress allowlist</text>
+  <!-- agent platform -->
+  <rect x="596" y="80" width="228" height="120" rx="8" fill="#fff" stroke="#f9a8d4"/>
+  <text x="710" y="102" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">Agent Platform</text>
+  <text x="710" y="118" font-size="10" fill="#374151" text-anchor="middle">agp.eu.hcompany.ai · MCP</text>
+  <text x="710" y="138" font-size="10" fill="#6b7280" text-anchor="middle">run_agent · wait_for_session</text>
+  <text x="710" y="152" font-size="10" fill="#6b7280" text-anchor="middle">send_message · cancel_session</text>
+  <text x="710" y="166" font-size="10" fill="#6b7280" text-anchor="middle">share_session → trajectory</text>
+  <text x="710" y="184" font-size="10" fill="#db2777" text-anchor="middle">h/web-surfer-flash (cloud browser)</text>
 
-  <rect x="806" y="62" width="238" height="118" rx="8" fill="#fdf2f8" stroke="#f9a8d4"/>
-  <text x="925" y="84" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">H agent platform (N2)</text>
-  <text x="925" y="101" font-size="11" fill="#374151" text-anchor="middle">agp.eu.hcompany.ai · MCP</text>
-  <text x="925" y="117" font-size="10" fill="#6b7280" text-anchor="middle">run_agent → h/web-surfer-flash</text>
-  <text x="925" y="131" font-size="10" fill="#6b7280" text-anchor="middle">cloud browser executes web steps</text>
-  <text x="925" y="147" font-size="10" fill="#6b7280" text-anchor="middle">share_session → trajectory JSON</text>
-  <text x="925" y="163" font-size="10" fill="#6b7280" text-anchor="middle">(evidence-based run report)</text>
+  <!-- holo -->
+  <rect x="596" y="220" width="228" height="70" rx="8" fill="#fff" stroke="#d1d5db"/>
+  <text x="710" y="244" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">Holo Vision</text>
+  <text x="710" y="260" font-size="10" fill="#374151" text-anchor="middle">api.hcompany.ai</text>
+  <text x="710" y="276" font-size="10" fill="#6b7280" text-anchor="middle">frame-pair → action + context</text>
 
-  <rect x="806" y="212" width="238" height="62" rx="8" fill="#f9fafb" stroke="#d1d5db"/>
-  <text x="925" y="234" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">Holo vision · api.hcompany.ai</text>
-  <text x="925" y="251" font-size="10" fill="#6b7280" text-anchor="middle">frame-pair action inference,</text>
-  <text x="925" y="265" font-size="10" fill="#6b7280" text-anchor="middle">per-step screen context</text>
+  <!-- gradium -->
+  <rect x="596" y="310" width="228" height="56" rx="8" fill="#fff" stroke="#d1d5db"/>
+  <text x="710" y="332" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">Gradium</text>
+  <text x="710" y="348" font-size="10" fill="#374151" text-anchor="middle">api.gradium.ai · STT + TTS</text>
 
-  <rect x="806" y="298" width="238" height="52" rx="8" fill="#f9fafb" stroke="#d1d5db"/>
-  <text x="925" y="320" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">Gradium STT · api.gradium.ai</text>
-  <text x="925" y="337" font-size="10" fill="#6b7280" text-anchor="middle">narration transcript (optional)</text>
+  <!-- openai -->
+  <rect x="596" y="386" width="228" height="56" rx="8" fill="#fff" stroke="#d1d5db"/>
+  <text x="710" y="408" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">OpenAI</text>
+  <text x="710" y="424" font-size="10" fill="#374151" text-anchor="middle">inference.local proxy → gpt-5.6-luna</text>
+  <text x="710" y="438" font-size="10" fill="#6b7280" text-anchor="middle">agent brain + pipeline synthesis</text>
 
-  <rect x="806" y="374" width="238" height="52" rx="8" fill="#f9fafb" stroke="#d1d5db"/>
-  <text x="925" y="396" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">GitHub · Debian mirrors</text>
-  <text x="925" y="413" font-size="10" fill="#6b7280" text-anchor="middle">agent startup fetch · ffmpeg apt</text>
+  <!-- ===================== ARROWS (minimal) ===================== -->
+  <!-- runner -> agent platform (MCP) -->
+  <line x1="524" y1="130" x2="596" y2="130" stroke="#db2777" stroke-width="2" marker-end="url(#arp)"/>
+  <text x="560" y="122" font-size="9" fill="#db2777" text-anchor="middle">MCP</text>
 
-  <!-- ===================== ARROWS ===================== -->
-  <!-- app record -> recording -->
-  <line x1="155" y1="158" x2="155" y2="184" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ar)"/>
-  <!-- recording -> pipeline (upload) -->
-  <line x1="274" y1="222" x2="336" y2="256" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ar)"/>
-  <text x="300" y="228" font-size="9" fill="#6b7280">upload</text>
-  <!-- app chat -> hermes -->
-  <line x1="274" y1="100" x2="336" y2="100" stroke="#2563eb" stroke-width="1.7" marker-end="url(#arb)"/>
-  <text x="305" y="93" font-size="9" fill="#2563eb" text-anchor="middle">:8642</text>
-  <!-- skills <-> kb -->
-  <line x1="500" y1="180" x2="440" y2="372" stroke="#059669" stroke-width="1.5" marker-end="url(#ar)"/>
-  <text x="446" y="270" font-size="9" fill="#059669" transform="rotate(72 446 270)">kb.py list/show/merges/accept…</text>
-  <!-- pipeline -> kb ingest -->
-  <line x1="540" y1="340" x2="540" y2="372" stroke="#059669" stroke-width="1.5" marker-end="url(#ar)"/>
-  <text x="588" y="360" font-size="9" fill="#059669" text-anchor="middle">kb.py ingest</text>
   <!-- pipeline -> holo -->
-  <line x1="744" y1="262" x2="806" y2="248" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ar)"/>
+  <line x1="524" y1="230" x2="596" y2="250" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ar)"/>
+
   <!-- pipeline -> gradium -->
-  <line x1="744" y1="290" x2="806" y2="318" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ar)"/>
-  <!-- runner -> H platform -->
-  <line x1="732" y1="128" x2="806" y2="116" stroke="#db2777" stroke-width="1.5" marker-end="url(#ar)"/>
-  <text x="768" y="112" font-size="9" fill="#db2777" text-anchor="middle">MCP</text>
-  <!-- inference.local -> ollama -->
-  <line x1="336" y1="631" x2="230" y2="631" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ar)"/>
-  <line x1="180" y1="631" x2="155" y2="328" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ar)"/>
-  <!-- grounding: kb -> app (via kb-context.sh) -->
-  <line x1="336" y1="480" x2="240" y2="158" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arb)"/>
-  <text x="243" y="330" font-size="9" fill="#2563eb" transform="rotate(-73 243 330)">kb-context.sh (live catalog)</text>
+  <line x1="524" y1="245" x2="596" y2="330" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <!-- pipeline -> kb -->
+  <line x1="280" y1="264" x2="280" y2="286" stroke="#059669" stroke-width="1.5" marker-end="url(#arg)"/>
+
+  <!-- skills -> kb -->
+  <line x1="200" y1="162" x2="160" y2="286" stroke="#059669" stroke-width="1.5" marker-end="url(#arg)"/>
+  <text x="150" y="224" font-size="9" fill="#059669" transform="rotate(73 150 224)">kb.py</text>
 
   <!-- legend -->
-  <text x="36" y="560" font-size="10" fill="#6b7280">chat/grounding path</text>
-  <line x1="36" y1="570" x2="96" y2="570" stroke="#2563eb" stroke-width="1.7"/>
-  <text x="36" y="592" font-size="10" fill="#6b7280">KB (system of record)</text>
-  <line x1="36" y1="602" x2="96" y2="602" stroke="#059669" stroke-width="1.7"/>
-  <text x="36" y="624" font-size="10" fill="#6b7280">cloud execution (N2)</text>
-  <line x1="36" y1="634" x2="96" y2="634" stroke="#db2777" stroke-width="1.7"/>
-  <text x="36" y="668" font-size="10" fill="#9ca3af">v2 — 2026-07-12: N1 KB + N3 dedup/merge shipped;</text>
-  <text x="36" y="682" font-size="10" fill="#9ca3af">N2 skills + MCP; SOUL.md standing context +</text>
-  <text x="36" y="696" font-size="10" fill="#9ca3af">app-side catalog grounding. N4 web UI: planned.</text>
+  <rect x="596" y="456" width="228" height="38" rx="6" fill="#f9fafb" stroke="#e2e8f0"/>
+  <line x1="606" y1="470" x2="630" y2="470" stroke="#db2777" stroke-width="2"/>
+  <text x="634" y="474" font-size="9" fill="#6b7280">cloud execution</text>
+  <line x1="706" y1="470" x2="730" y2="470" stroke="#059669" stroke-width="2"/>
+  <text x="734" y="474" font-size="9" fill="#6b7280">KB ops</text>
+  <line x1="606" y1="484" x2="630" y2="484" stroke="#6b7280" stroke-width="1.5"/>
+  <text x="634" y="488" font-size="9" fill="#6b7280">pipeline API calls</text>
 </svg>
