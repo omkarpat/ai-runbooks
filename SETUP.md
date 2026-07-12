@@ -14,7 +14,7 @@ Desktop, `nemohermes v0.0.79`). Paths are relative to the repo root.
 
 | Key (`.env`) | Format | Used for | Required |
 |---|---|---|---|
-| `OPENAI_API_KEY` | `sk-…` | Agent brain **and** pipeline synthesis (routed via `inference.local`) | ✅ |
+| `OPENAI_API_KEY` | `sk-…` | Agent brain **and** pipeline synthesis (routed via `inference.local`) | ✅ (or local Ollama — see [Appendix](#appendix--running-on-local-ollama-no-openai-key)) |
 | `H_API_KEY` | `hk-…` | Holo vision (pipeline frame analysis) — portal.hcompany.ai | ✅ for pipeline |
 | `GRADIUM_API_KEY` | `gsk_…` / `gd_…` | Gradium STT (pipeline narration) | optional (visual-only without it) |
 
@@ -229,10 +229,22 @@ A normal `--recreate-sandbox` restores custom egress policies **if its backup
 succeeds**; if the backup fails and you force `NEMOCLAW_RECREATE_WITHOUT_BACKUP=1`,
 re-run the provision script to reapply them.
 
+> ⚠️ **`nemohermes runbooks rebuild` reuses the stored `--from` Dockerfile.**
+> If the sandbox was ever onboarded with a custom `--from` image (the §3
+> mistake), `rebuild` — even when the gateway itself suggests it via
+> `SUPERVISOR_REBUILD_REQUIRED` — silently rebuilds the *same broken image*
+> and destroys the sandbox in the process. The only fix is a **fresh onboard
+> without `--from`** (§3 / the provision script), then re-apply policies,
+> ffmpeg, and uploads (any recreate wipes all three).
+
 ## Gotchas we hit (so you don't have to)
 
 - **Custom `--from` image on the bare base breaks the agent** — omits the runtime
   layer → no `config.yaml`, "foreign PID 1". Use the default image (§3).
+- **`rebuild` does NOT fix a custom-image sandbox** — it reuses the stored
+  `--from` config and reproduces the broken image (see Lifecycle & recovery).
+  Symptoms: `gateway-token` fails, `gateway restart` errors with
+  `nemoclaw-gateway-control: no such file or directory`. Fresh onboard instead.
 - **RAM is not the agent-startup fix.** The agent failing at "step 7 / 90s" was
   the missing runtime layer, not memory.
 - **ffmpeg needs the `debian-apt` egress** — apt is blocked (403) until then.
@@ -257,3 +269,55 @@ python3 pipeline/run.py <recording.mov> "my workflow"
 
 No egress enforcement, no agent — pipeline behavior only. Tuning here
 (`SCENE_THRESH`, `FLOOR_SECS`, prompts) carries into the sandbox unchanged.
+
+## Appendix — running on local Ollama (no OpenAI key)
+
+The full stack also runs with a local Ollama model as the agent brain — no
+`OPENAI_API_KEY` at all. Validated with `qwen3:latest` (8B) on macOS. The
+differences from the OpenAI path:
+
+**1. Onboard with the ollama provider** (instead of §3's openai env vars):
+
+```bash
+NEMOCLAW_PROVIDER=ollama NEMOCLAW_MODEL=qwen3:latest \
+NEMOCLAW_IGNORE_RUNTIME_RESOURCES=1 NEMOCLAW_RECREATE_WITHOUT_BACKUP=1 \
+  nemohermes onboard --non-interactive --fresh --recreate-sandbox --agent hermes \
+    --name runbooks --no-gpu --no-sandbox-gpu --yes --yes-i-accept-third-party-software
+```
+
+No `inference set` step needed afterward — Ollama passes the onboarding smoke
+test directly (no gpt-5.x `max_tokens` issue).
+
+**2. Skip `openai.yaml`** in the §4 policy loop — the gateway proxies Ollama
+via `inference.local`; nothing needs `api.openai.com`.
+
+**3. Override the agent's context-window check.** The Hermes agent refuses
+models under **64K context**; qwen3 reports 40,960 (Ollama may discover as
+little as 16,384). Chat requests fail with
+`Model ... has a context window of N tokens, which is below the minimum 64,000`.
+Fix inside the sandbox:
+
+```bash
+openshell sandbox exec -n runbooks -- sh -lc \
+  'sed -i "s/^  context_length: .*/  context_length: 65536/" /sandbox/.hermes/config.yaml'
+```
+
+The override is a declared limit, not a real one — conversations beyond the
+model's true window get truncated by Ollama. **NemoClaw regenerates
+`config.yaml`** on `inference set` / gateway restart / rebuild, so re-apply
+the sed if the 64K error returns.
+
+**4. In-sandbox `.env` synthesis vars** (§7) point at the same gateway route,
+just with the local model:
+
+```bash
+SYNTH_URL=https://inference.local/v1/chat/completions
+SYNTH_MODEL=qwen3:latest        # no SYNTH_TOKEN needed
+```
+
+Provision script note: `scripts/provision-sandbox.sh` hard-fails without
+`OPENAI_API_KEY` in `.env` — on the Ollama path run its steps manually
+(policies → ffmpeg → upload → snapshot), or onboard as above first.
+
+Runbook synthesis quality on an 8B local model is noticeably below
+`gpt-5.6-luna`; the pipeline runs, but expect rougher step descriptions.
