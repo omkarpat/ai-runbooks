@@ -111,9 +111,8 @@
   <!-- pipeline -> kb -->
   <line x1="280" y1="332" x2="280" y2="354" stroke="#059669" stroke-width="1.5" marker-end="url(#arg)"/>
 
-  <!-- skills -> kb -->
-  <line x1="200" y1="230" x2="160" y2="354" stroke="#059669" stroke-width="1.5" marker-end="url(#arg)"/>
-  <text x="150" y="292" font-size="9" fill="#059669" transform="rotate(73 150 292)">kb.py</text>
+  <!-- skills -> kb (routed left of pipeline box) -->
+  <polyline points="48,230 28,230 28,370 48,370" fill="none" stroke="#059669" stroke-width="1.5" marker-end="url(#arg)"/>
 
   <!-- legend -->
   <rect x="596" y="524" width="228" height="26" rx="6" fill="#f9fafb" stroke="#e2e8f0"/>
