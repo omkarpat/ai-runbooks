@@ -67,9 +67,9 @@
   <text x="280" y="528" font-size="10" fill="#6b7280" text-anchor="middle">catalog · runbook detail · video + step seeking · executions · merge diffs · edits</text>
 
   <!-- ===================== H COMPANY APIS ===================== -->
-  <rect x="580" y="88" width="260" height="462" rx="12" fill="#fdf2f8" stroke="#f9a8d4" stroke-width="1.5"/>
+  <rect x="580" y="88" width="260" height="290" rx="12" fill="#fdf2f8" stroke="#f9a8d4" stroke-width="1.5"/>
   <text x="596" y="114" font-size="14" font-weight="700" fill="#9d174d">H Company APIs</text>
-  <text x="596" y="132" font-size="10" fill="#db2777">egress-allowlisted endpoints</text>
+  <text x="596" y="132" font-size="10" fill="#db2777">egress-allowlisted</text>
 
   <!-- agent platform -->
   <rect x="596" y="148" width="228" height="120" rx="8" fill="#fff" stroke="#f9a8d4"/>
@@ -81,21 +81,25 @@
   <text x="710" y="252" font-size="10" fill="#db2777" text-anchor="middle">h/web-surfer-flash (cloud browser)</text>
 
   <!-- holo -->
-  <rect x="596" y="288" width="228" height="70" rx="8" fill="#fff" stroke="#d1d5db"/>
+  <rect x="596" y="288" width="228" height="70" rx="8" fill="#fff" stroke="#f9a8d4"/>
   <text x="710" y="312" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">Holo Vision</text>
   <text x="710" y="328" font-size="10" fill="#374151" text-anchor="middle">api.hcompany.ai</text>
   <text x="710" y="344" font-size="10" fill="#6b7280" text-anchor="middle">frame-pair → action + context</text>
 
+  <!-- ===================== OTHER EGRESS-ALLOWED ===================== -->
+  <text x="596" y="390" font-size="11" font-weight="600" fill="#6b7280">Other egress-allowed APIs</text>
+
   <!-- gradium -->
-  <rect x="596" y="378" width="228" height="56" rx="8" fill="#fff" stroke="#d1d5db"/>
-  <text x="710" y="400" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">Gradium</text>
-  <text x="710" y="416" font-size="10" fill="#374151" text-anchor="middle">api.gradium.ai · STT + TTS</text>
+  <rect x="596" y="400" width="110" height="56" rx="8" fill="#fff" stroke="#d1d5db"/>
+  <text x="651" y="422" font-size="11" font-weight="600" fill="#111827" text-anchor="middle">Gradium</text>
+  <text x="651" y="438" font-size="9" fill="#374151" text-anchor="middle">STT + TTS</text>
+  <text x="651" y="450" font-size="9" fill="#6b7280" text-anchor="middle">api.gradium.ai</text>
 
   <!-- openai -->
-  <rect x="596" y="454" width="228" height="56" rx="8" fill="#fff" stroke="#d1d5db"/>
-  <text x="710" y="476" font-size="12" font-weight="600" fill="#111827" text-anchor="middle">OpenAI</text>
-  <text x="710" y="492" font-size="10" fill="#374151" text-anchor="middle">inference.local proxy → gpt-5.6-luna</text>
-  <text x="710" y="506" font-size="10" fill="#6b7280" text-anchor="middle">agent brain + pipeline synthesis</text>
+  <rect x="714" y="400" width="110" height="56" rx="8" fill="#fff" stroke="#d1d5db"/>
+  <text x="769" y="422" font-size="11" font-weight="600" fill="#111827" text-anchor="middle">OpenAI</text>
+  <text x="769" y="438" font-size="9" fill="#374151" text-anchor="middle">gpt-5.6-luna</text>
+  <text x="769" y="450" font-size="9" fill="#6b7280" text-anchor="middle">inference proxy</text>
 
   <!-- ===================== ARROWS (minimal) ===================== -->
   <!-- runner -> agent platform (MCP) -->
@@ -106,7 +110,7 @@
   <line x1="524" y1="298" x2="596" y2="318" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ar)"/>
 
   <!-- pipeline -> gradium -->
-  <line x1="524" y1="312" x2="596" y2="398" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ar)"/>
+  <line x1="524" y1="312" x2="596" y2="428" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ar)"/>
 
   <!-- pipeline -> kb -->
   <line x1="280" y1="332" x2="280" y2="354" stroke="#059669" stroke-width="1.5" marker-end="url(#arg)"/>
